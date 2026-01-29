@@ -1,9 +1,4 @@
-// Use config.js if set; else localhost for dev, relative /api when deployed (Render/Replit)
-const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined && window.API_BASE_URL !== '')
-    ? window.API_BASE_URL
-    : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:5000/api'
-        : '/api');
+const API_BASE_URL = 'http://localhost:5000/api';
 const CACHE_KEY = 'bsu_research_data';
 const CACHE_TIMESTAMP_KEY = 'bsu_research_data_timestamp';
 const CACHE_VERSION_KEY = 'bsu_research_cache_version';

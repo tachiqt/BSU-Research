@@ -11,21 +11,8 @@ CORS(app)
 
 # Initialize database on startup
 try:
-    from database import init_database, get_faculty_count, import_faculty_from_list
+    from database import init_database
     init_database()
-    # On Render/Replit the filesystem is ephemeral - DB resets on deploy. Auto-seed from bundled Excel if empty.
-    if get_faculty_count() == 0:
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        default_excel = os.path.join(project_root, 'img', 'ref.xlsx')
-        if os.path.exists(default_excel):
-            try:
-                from faculty_reader import load_faculty_from_excel
-                faculty_list = load_faculty_from_excel(default_excel, sheet_name=None)
-                if faculty_list:
-                    result = import_faculty_from_list(faculty_list, clear_existing=True, skip_duplicates=False)
-                    print(f"Auto-seeded {result['imported']} faculty from img/ref.xlsx (database was empty)")
-            except Exception as seed_err:
-                print(f"Auto-seed from ref.xlsx skipped: {seed_err}")
 except Exception as e:
     print(f"Warning: Could not initialize database: {e}")
 
@@ -1130,16 +1117,13 @@ def health_check():
     try:
         from database import get_faculty_count
         faculty_count = get_faculty_count()
-        from scopus import SCOPUS_API_KEY
-        scopus_configured = bool(SCOPUS_API_KEY and SCOPUS_API_KEY.strip())
         return jsonify({
             'status': 'healthy',
             'message': 'Backend is running',
-            'faculty_in_database': faculty_count,
-            'scopus_configured': scopus_configured
+            'faculty_in_database': faculty_count
         }), 200
-    except Exception as e:
-        return jsonify({'status': 'healthy', 'message': 'Backend is running', 'error': str(e)}), 200
+    except:
+        return jsonify({'status': 'healthy', 'message': 'Backend is running'}), 200
 
 # Serve static files (HTML, CSS, JS, images)
 # This allows Flask to serve the frontend files

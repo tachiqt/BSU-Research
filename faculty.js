@@ -1,9 +1,5 @@
-// Use config.js if set; else localhost for dev, relative /api when deployed (Render/Replit)
-const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined && window.API_BASE_URL !== '')
-    ? window.API_BASE_URL
-    : (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? 'http://localhost:5000/api'
-        : '/api';
+// API Base URL - use localhost for development
+const API_BASE_URL = 'http://localhost:5000/api';
 const ITEMS_PER_PAGE = 10;
 
 let currentPage = 1;

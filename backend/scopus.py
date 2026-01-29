@@ -170,14 +170,6 @@ def _extract_affiliation(affiliation_entry):
 
 def fetch_scopus_data(organization_name=None, organization_id=None, include_all_doctypes=True):
     try:
-        if not SCOPUS_API_KEY or not SCOPUS_API_KEY.strip():
-            return {
-                'publications': [],
-                'total_publications': 0,
-                'citations': {},
-                'statistics': {},
-                'error': 'Scopus API key is not configured. Set SCOPUS_API_KEY in your environment variables (e.g. in Render or Replit dashboard). Get a key from https://dev.elsevier.com/'
-            }
         if organization_id:
             base_query = f'AF-ID({organization_id})'
         elif organization_name:
