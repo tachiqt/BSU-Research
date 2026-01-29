@@ -365,7 +365,7 @@ async function handleAddFaculty(e) {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage('Faculty member added successfully!', 'success');
+            showMessage(data.message || 'Faculty member added successfully!', 'success');
             document.getElementById('addFacultyForm').reset();
             await loadDepartments();
             loadFacultyCount();

@@ -1027,7 +1027,7 @@ def get_faculty_list():
 
 @app.route('/api/faculty/add', methods=['POST'])
 def add_faculty_member():
-    """Add a single faculty member"""
+    """Add a single faculty member. Uses database when available; falls back to appending to Excel if database is not available."""
     try:
         data = request.get_json()
         name = data.get('name', '').strip()
@@ -1039,22 +1039,58 @@ def add_faculty_member():
         if not department:
             return jsonify({'error': 'Department is required'}), 400
         
-        from database import add_faculty
-        faculty_id, is_new = add_faculty(name, department, position, skip_duplicate=True)
-        
-        if not is_new:
+        # Try database first
+        try:
+            from database import add_faculty
+            faculty_id, is_new = add_faculty(name, department, position, skip_duplicate=True)
+            
+            if not is_new:
+                return jsonify({
+                    'error': f'Faculty member "{name}" already exists',
+                    'duplicate': True
+                }), 409
+            
             return jsonify({
-                'error': f'Faculty member "{name}" already exists',
-                'duplicate': True
-            }), 409
-        
-        return jsonify({
-            'message': 'Faculty member added successfully',
-            'id': faculty_id,
-            'name': name,
-            'department': department,
-            'position': position
-        }), 201
+                'message': 'Faculty member added successfully',
+                'id': faculty_id,
+                'name': name,
+                'department': department,
+                'position': position
+            }), 201
+        except Exception as db_err:
+            # Database unavailable or failed — append to Excel instead
+            backend_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(backend_dir)
+            for excel_path in [
+                os.path.join(project_root, 'img', 'ref.xlsx'),
+                os.path.join(backend_dir, 'ref.xlsx'),
+            ]:
+                if os.path.exists(excel_path):
+                    try:
+                        from faculty_reader import append_faculty_to_excel
+                        result = append_faculty_to_excel(
+                            excel_path, name, department, position,
+                            sheet_name=None, skip_duplicate=True
+                        )
+                        if result.get('duplicate'):
+                            return jsonify({
+                                'error': f'Faculty member "{name}" already exists in Excel',
+                                'duplicate': True
+                            }), 409
+                        return jsonify({
+                            'message': 'Faculty member added to Excel (database unavailable).',
+                            'added_to_excel': True,
+                            'name': name,
+                            'department': department,
+                            'position': position
+                        }), 201
+                    except Exception as excel_err:
+                        return jsonify({
+                            'error': f'Database and Excel both failed. Database: {str(db_err)}. Excel: {str(excel_err)}'
+                        }), 500
+            return jsonify({
+                'error': f'Database unavailable ({str(db_err)}). No ref.xlsx found to add faculty to Excel.'
+            }), 503
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

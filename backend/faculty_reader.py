@@ -1,6 +1,13 @@
 import pandas as pd
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional, Tuple
+
+# Optional openpyxl for appending to Excel (used by append_faculty_to_excel)
+try:
+    from openpyxl import load_workbook
+    _OPENPYXL_AVAILABLE = True
+except ImportError:
+    _OPENPYXL_AVAILABLE = False
 
 def load_faculty_from_db_or_excel(file_path: str = None, sheet_name: str = None, prefer_db: bool = True) -> List[Dict]:
     """
@@ -113,6 +120,118 @@ def load_faculty_from_excel(file_path: str = None, sheet_name: str = None) -> Li
         return faculty_list
     except Exception as e:
         raise Exception(f"Error reading Excel file: {str(e)}")
+
+
+def _detect_excel_columns(ws) -> Tuple[Optional[int], Optional[int], Optional[int]]:
+    """
+    Detect 1-based column indices for name, department, position from first row.
+    Returns (name_col, dept_col, position_col).
+    """
+    name_col = dept_col = position_col = None
+    for col_idx, cell in enumerate(ws[1], start=1):
+        val = (cell.value or '').strip() if cell.value else ''
+        val_lower = val.lower()
+        if 'name' in val_lower and name_col is None:
+            name_col = col_idx
+        if 'department' in val_lower and dept_col is None:
+            dept_col = col_idx
+        if ('position' in val_lower or 'designation' in val_lower) and position_col is None:
+            position_col = col_idx
+    return (name_col, dept_col, position_col)
+
+
+def append_faculty_to_excel(
+    file_path: str,
+    name: str,
+    department: str,
+    position: str = '',
+    sheet_name: Optional[str] = None,
+    skip_duplicate: bool = True,
+) -> Dict:
+    """
+    Append a single faculty row to an existing Excel file.
+    Uses openpyxl to preserve file format. Falls back to pandas if openpyxl fails.
+
+    Returns:
+        dict: {'success': True} or {'duplicate': True} if name already exists and skip_duplicate=True.
+    Raises:
+        Exception: If file not found, columns missing, or write fails.
+    """
+    name = (name or '').strip()
+    department = (department or '').strip()
+    position = (position or '').strip()
+    if not name:
+        raise ValueError("Name is required")
+    if not department:
+        raise ValueError("Department is required")
+
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Excel file not found: {file_path}")
+
+    if _OPENPYXL_AVAILABLE:
+        wb = load_workbook(file_path, read_only=False)
+        sheet_names = wb.sheetnames
+        if sheet_name and sheet_name.strip():
+            match = None
+            for s in sheet_names:
+                if s.strip().lower() == sheet_name.strip().lower():
+                    match = s
+                    break
+            ws = wb[match] if match else wb[sheet_names[0]]
+        else:
+            ws = wb.active if wb.active else wb[sheet_names[0]]
+        name_col, dept_col, position_col = _detect_excel_columns(ws)
+        if not name_col or not dept_col:
+            raise ValueError(
+                "Excel must have columns containing 'Name' and 'Department'. "
+                f"Found first row: {[ws.cell(1, c).value for c in range(1, ws.max_column + 1)]}"
+            )
+        max_row = ws.max_row
+        for r in range(2, max_row + 1):
+            existing_name = (ws.cell(row=r, column=name_col).value or '')
+            if isinstance(existing_name, str) and existing_name.strip().lower() == name.lower():
+                return {'duplicate': True}
+        next_row = max_row + 1
+        ws.cell(row=next_row, column=name_col, value=name)
+        ws.cell(row=next_row, column=dept_col, value=department)
+        if position_col:
+            ws.cell(row=next_row, column=position_col, value=position)
+        wb.save(file_path)
+        return {'success': True}
+
+    # Fallback: pandas read, append row, write back (overwrites file)
+    excel_file = pd.ExcelFile(file_path)
+    available_sheets = excel_file.sheet_names
+    use_sheet = (sheet_name or '').strip() or available_sheets[0]
+    for s in available_sheets:
+        if s.strip().lower() == (sheet_name or '').strip().lower():
+            use_sheet = s
+            break
+    df = pd.read_excel(file_path, sheet_name=use_sheet)
+    df.columns = df.columns.str.strip()
+    name_col = dept_col = position_col = None
+    for col in df.columns:
+        col_lower = col.lower()
+        if 'name' in col_lower and name_col is None:
+            name_col = col
+        if 'department' in col_lower and dept_col is None:
+            dept_col = col
+        if ('position' in col_lower or 'designation' in col_lower) and position_col is None:
+            position_col = col
+    if not name_col or not dept_col:
+        raise ValueError("Excel must have columns containing 'Name' and 'Department'.")
+    if skip_duplicate and name_col in df.columns:
+        if df[name_col].astype(str).str.strip().str.lower().eq(name.lower()).any():
+            return {'duplicate': True}
+    new_row = {c: '' for c in df.columns}
+    new_row[name_col] = name
+    new_row[dept_col] = department
+    if position_col:
+        new_row[position_col] = position
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    df.to_excel(file_path, sheet_name=use_sheet, index=False, engine='openpyxl')
+    return {'success': True}
+
 
 def _generate_name_variants(name: str) -> List[str]:
     variants = [name.strip()] 
