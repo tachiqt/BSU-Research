@@ -1,5 +1,9 @@
-// API Base URL - use localhost for development
-const API_BASE_URL = 'http://localhost:5000/api';
+// API Base URL - use relative /api when served from same host (avoids some ad-blocker blocks), else localhost
+const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined && window.API_BASE_URL !== '')
+    ? window.API_BASE_URL
+    : (typeof window !== 'undefined' && window.location.protocol !== 'file:' && window.location.host !== '')
+        ? '/api'
+        : 'http://localhost:5000/api';
 const ITEMS_PER_PAGE = 10;
 
 let currentPage = 1;
@@ -60,6 +64,19 @@ function switchTab(tab) {
     }
 }
 
+// Show hint when fetch fails (e.g. ERR_BLOCKED_BY_CLIENT from ad blocker)
+function showFetchErrorHint(error, context) {
+    const isBlocked = (error && (error.message === 'Failed to fetch' || error.name === 'TypeError'));
+    if (isBlocked) {
+        showMessage(
+            'Request was blocked. Disable ad blocker or privacy extensions for this site, or open the page from http://localhost:5000',
+            'error'
+        );
+    } else if (context) {
+        showMessage(context + ': ' + (error && error.message ? error.message : 'Network error'), 'error');
+    }
+}
+
 // Load faculty count
 async function loadFacultyCount() {
     try {
@@ -70,6 +87,7 @@ async function loadFacultyCount() {
         }
     } catch (error) {
         console.error('Error loading faculty count:', error);
+        showFetchErrorHint(error, null);
     }
 }
 
@@ -82,7 +100,7 @@ async function loadFacultyList() {
         const response = await fetch(`${API_BASE_URL}/faculty/list`);
         const data = await response.json();
         
-        if (data.faculty && data.faculty.length > 0) {
+        if (data.faculty && Array.isArray(data.faculty) && data.faculty.length > 0) {
             // Sort alphabetically by name
             allFacultyData = data.faculty.sort((a, b) => {
                 const nameA = a.name.toLowerCase();
@@ -107,7 +125,7 @@ async function loadFacultyList() {
     } catch (error) {
         tbody.innerHTML = '<tr><td colspan="4" class="error-text">Error loading faculty members</td></tr>';
         document.getElementById('paginationContainer').innerHTML = '';
-        showMessage('Error loading faculty list: ' + error.message, 'error');
+        showFetchErrorHint(error, 'Error loading faculty list');
     }
 }
 

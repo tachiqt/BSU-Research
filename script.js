@@ -1,4 +1,9 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Use relative /api when served from same host (e.g. Render), else localhost
+const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined && window.API_BASE_URL !== '')
+    ? window.API_BASE_URL
+    : (typeof window !== 'undefined' && window.location.protocol !== 'file:' && window.location.host !== '')
+        ? '/api'
+        : 'http://localhost:5000/api';
 const CACHE_KEY = 'bsu_research_data';
 const CACHE_TIMESTAMP_KEY = 'bsu_research_data_timestamp';
 const CACHE_VERSION_KEY = 'bsu_research_cache_version';
