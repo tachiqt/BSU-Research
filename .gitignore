@@ -43,3 +43,11 @@ database.db
 # OS
 .DS_Store
 Thumbs.db
+
+# Replit
+.pythonlibs/
+.upm/
+.cache/
+.local/
+pyproject.toml
+uv.lock
