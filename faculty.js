@@ -32,21 +32,41 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('searchFaculty').addEventListener('input', handleSearch);
 });
 
+// Normalize department name (merge comma variant into canonical form)
+function normalizeDepartmentName(name) {
+    if (!name || typeof name !== 'string') return '';
+    var s = name.trim();
+    if (s === '' || s === 'Select department...') return '';
+    if (s === 'College of Architecture, Fine Arts and Design') return 'College of Architecture Fine Arts and Design';
+    return s;
+}
+
 // Load distinct departments and populate Add + Edit dropdowns
 async function loadDepartments() {
     try {
         const response = await fetch(`${API_BASE_URL}/faculty/departments`);
         const data = await response.json();
-        let list = (data.departments && data.departments.length) ? data.departments : DEFAULT_DEPARTMENTS;
-        list = [...new Set(list)].sort();
+        let raw = (data.departments && data.departments.length) ? data.departments : DEFAULT_DEPARTMENTS;
+        var list = [];
+        var seen = {};
+        raw.forEach(function(dept) {
+            var norm = normalizeDepartmentName(dept);
+            if (norm && !seen[norm]) {
+                seen[norm] = true;
+                list.push(norm);
+            }
+        });
+        list.sort();
         
         function fillSelect(selectId) {
             const sel = document.getElementById(selectId);
             if (!sel) return;
             const currentVal = sel.value;
             sel.innerHTML = '';
-            sel.appendChild(document.createElement('option')).value = '';
-            sel.options[sel.options.length - 1].textContent = 'Select department...';
+            var placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select department...';
+            sel.appendChild(placeholder);
             list.forEach(function(dept) {
                 const opt = document.createElement('option');
                 opt.value = dept;
@@ -439,7 +459,10 @@ async function openEditModal(facultyId) {
         
         document.getElementById('editFacultyId').value = faculty.id;
         document.getElementById('editFacultyName').value = faculty.name;
-        document.getElementById('editFacultyDepartment').value = faculty.department;
+        var deptNorm = normalizeDepartmentName(faculty.department) || faculty.department;
+        if (deptNorm && Array.from(document.getElementById('editFacultyDepartment').options).some(function(o) { return o.value === deptNorm; })) {
+            document.getElementById('editFacultyDepartment').value = deptNorm;
+        }
         document.getElementById('editFacultyPosition').value = faculty.position || '';
         
         document.getElementById('editModal').classList.add('active');
