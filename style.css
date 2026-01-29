@@ -1022,11 +1022,26 @@ body::after {
 }
 
 .form-group input[type="text"],
-.form-group input[type="file"] {
+.form-group input[type="file"],
+.form-group select {
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 1em;
+}
+
+.form-group select {
+    background: white;
+    cursor: pointer;
+}
+
+.form-group select:focus {
+    outline: none;
+    border-color: #8B0000;
+}
+
+.department-other-input {
+    margin-top: 8px;
 }
 
 .form-group input[type="text"]:focus {

@@ -40,6 +40,15 @@ def init_database():
     conn.close()
     print(f"Database initialized at: {DB_PATH}")
 
+def get_distinct_departments() -> List[str]:
+    """Return sorted list of distinct department names (for dropdowns)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT department FROM faculty WHERE department IS NOT NULL AND TRIM(department) != '' ORDER BY department")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
 def load_faculty_from_db() -> List[Dict]:
     """Load all faculty from database"""
     conn = get_db_connection()

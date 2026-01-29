@@ -1005,6 +1005,16 @@ def get_faculty_count_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/faculty/departments', methods=['GET'])
+def get_faculty_departments():
+    """Get distinct department names (for dropdowns)."""
+    try:
+        from database import get_distinct_departments
+        departments = get_distinct_departments()
+        return jsonify({'departments': departments}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/faculty/list', methods=['GET'])
 def get_faculty_list():
     """Get all faculty members"""
