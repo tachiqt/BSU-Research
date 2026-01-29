@@ -139,12 +139,17 @@ function switchTab(tab) {
     }
 }
 
-// Show hint when fetch fails (e.g. ERR_BLOCKED_BY_CLIENT from ad blocker)
+// Track connection-error hint to avoid showing it multiple times when API is down
+let _connectionErrorShownAt = 0;
 function showFetchErrorHint(error, context) {
-    const isBlocked = (error && (error.message === 'Failed to fetch' || error.name === 'TypeError'));
-    if (isBlocked) {
+    const isConnectionRefused = (error && (error.message === 'Failed to fetch' || error.name === 'TypeError'));
+    const isBlocked = isConnectionRefused; // Could refine: ad-blocker vs server down
+    const now = Date.now();
+    if (now - _connectionErrorShownAt < 8000) return; // Don't spam; one hint per 8s
+    _connectionErrorShownAt = now;
+    if (isBlocked || isConnectionRefused) {
         showMessage(
-            'Request was blocked. Disable ad blocker or privacy extensions for this site, or open the page from http://localhost:5000',
+            'Backend unavailable. If running locally, start the server (e.g. python backend/app.py). On Replit, ensure the server is running.',
             'error'
         );
     } else if (context) {
@@ -550,6 +555,7 @@ function handleSearch() {
 // Show message
 function showMessage(message, type = 'info') {
     const container = document.getElementById('messageContainer');
+    if (!container) return;
     const messageDiv = document.createElement('div');
     messageDiv.className = `message message-${type}`;
     messageDiv.textContent = message;
@@ -563,7 +569,12 @@ function showMessage(message, type = 'info') {
     
     setTimeout(() => {
         messageDiv.classList.remove('show');
-        setTimeout(() => container.removeChild(messageDiv), 300);
+        setTimeout(() => {
+            // Only remove if still in DOM (another showMessage may have cleared container)
+            if (messageDiv.parentNode === container) {
+                container.removeChild(messageDiv);
+            }
+        }, 300);
     }, 3000);
 }
 
