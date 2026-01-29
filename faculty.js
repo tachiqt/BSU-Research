@@ -12,10 +12,10 @@ let filteredFacultyData = [];
 
 // Default departments when DB is empty (match dashboard college names)
 const DEFAULT_DEPARTMENTS = [
+    'College of Architecture Fine Arts and Design',
+    'College of Informatics and Computing Sciences',
     'College of Engineering',
-    'College of Informatics & Computing Sciences',
-    'College of Engineering Technology',
-    'College of Architecture Fine Arts and Design'
+    'College of Engineering Technology'
 ];
 
 // Initialize page
@@ -24,27 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadDepartments();
     loadFacultyCount();
     loadFacultyList();
-    
-    // Department dropdown: show/hide "Other" text input
-    const facultyDeptSelect = document.getElementById('facultyDepartment');
-    const facultyDeptOther = document.getElementById('facultyDepartmentOther');
-    const editDeptSelect = document.getElementById('editFacultyDepartment');
-    const editDeptOther = document.getElementById('editFacultyDepartmentOther');
-    
-    if (facultyDeptSelect && facultyDeptOther) {
-        facultyDeptSelect.addEventListener('change', function() {
-            facultyDeptOther.style.display = this.value === '__other__' ? 'block' : 'none';
-            facultyDeptOther.required = this.value === '__other__';
-            if (this.value !== '__other__') facultyDeptOther.value = '';
-        });
-    }
-    if (editDeptSelect && editDeptOther) {
-        editDeptSelect.addEventListener('change', function() {
-            editDeptOther.style.display = this.value === '__other__' ? 'block' : 'none';
-            editDeptOther.required = this.value === '__other__';
-            if (this.value !== '__other__') editDeptOther.value = '';
-        });
-    }
     
     // Form handlers
     document.getElementById('addFacultyForm').addEventListener('submit', handleAddFaculty);
@@ -64,9 +43,6 @@ async function loadDepartments() {
         function fillSelect(selectId) {
             const sel = document.getElementById(selectId);
             if (!sel) return;
-            const otherOpt = sel.querySelector('option[value="__other__"]');
-            const otherInputId = selectId === 'facultyDepartment' ? 'facultyDepartmentOther' : 'editFacultyDepartmentOther';
-            const otherInput = document.getElementById(otherInputId);
             const currentVal = sel.value;
             sel.innerHTML = '';
             sel.appendChild(document.createElement('option')).value = '';
@@ -77,16 +53,8 @@ async function loadDepartments() {
                 opt.textContent = dept;
                 sel.appendChild(opt);
             });
-            const optOther = document.createElement('option');
-            optOther.value = '__other__';
-            optOther.textContent = 'Other (type below)';
-            sel.appendChild(optOther);
-            if (currentVal && currentVal !== '__other__' && list.indexOf(currentVal) !== -1) {
+            if (currentVal && list.indexOf(currentVal) !== -1) {
                 sel.value = currentVal;
-            }
-            if (otherInput) {
-                otherInput.style.display = sel.value === '__other__' ? 'block' : 'none';
-                otherInput.required = sel.value === '__other__';
             }
         }
         fillSelect('facultyDepartment');
@@ -106,10 +74,6 @@ async function loadDepartments() {
                 opt.textContent = dept;
                 sel.appendChild(opt);
             });
-            const optOther = document.createElement('option');
-            optOther.value = '__other__';
-            optOther.textContent = 'Other (type below)';
-            sel.appendChild(optOther);
         });
     }
 }
@@ -347,30 +311,13 @@ function goToPage(page) {
     window.scrollTo({ top: document.getElementById('facultyTableContainer').offsetTop - 20, behavior: 'smooth' });
 }
 
-// Get department value from dropdown (or "Other" text input)
-function getAddFacultyDepartment() {
-    const sel = document.getElementById('facultyDepartment');
-    const other = document.getElementById('facultyDepartmentOther');
-    if (!sel) return '';
-    if (sel.value === '__other__') return (other && other.value) ? other.value.trim() : '';
-    return sel.value ? sel.value.trim() : '';
-}
-function getEditFacultyDepartment() {
-    const sel = document.getElementById('editFacultyDepartment');
-    const other = document.getElementById('editFacultyDepartmentOther');
-    if (!sel) return '';
-    if (sel.value === '__other__') return (other && other.value) ? other.value.trim() : '';
-    return sel.value ? sel.value.trim() : '';
-}
-
 // Handle add faculty form
 async function handleAddFaculty(e) {
     e.preventDefault();
     
-    const department = getAddFacultyDepartment();
     const formData = {
         name: document.getElementById('facultyName').value.trim(),
-        department: department,
+        department: document.getElementById('facultyDepartment').value ? document.getElementById('facultyDepartment').value.trim() : '',
         position: document.getElementById('facultyPosition').value.trim()
     };
     
@@ -400,8 +347,6 @@ async function handleAddFaculty(e) {
         if (response.ok) {
             showMessage('Faculty member added successfully!', 'success');
             document.getElementById('addFacultyForm').reset();
-            document.getElementById('facultyDepartmentOther').style.display = 'none';
-            document.getElementById('facultyDepartmentOther').required = false;
             await loadDepartments();
             loadFacultyCount();
             switchTab('view');
@@ -507,8 +452,6 @@ async function openEditModal(facultyId) {
 function closeEditModal() {
     document.getElementById('editModal').classList.remove('active');
     document.getElementById('editFacultyForm').reset();
-    document.getElementById('editFacultyDepartmentOther').style.display = 'none';
-    document.getElementById('editFacultyDepartmentOther').required = false;
 }
 
 // Handle edit form
@@ -516,10 +459,9 @@ async function handleEditFaculty(e) {
     e.preventDefault();
     
     const facultyId = document.getElementById('editFacultyId').value;
-    const department = getEditFacultyDepartment();
     const formData = {
         name: document.getElementById('editFacultyName').value.trim(),
-        department: department,
+        department: document.getElementById('editFacultyDepartment').value ? document.getElementById('editFacultyDepartment').value.trim() : '',
         position: document.getElementById('editFacultyPosition').value.trim()
     };
     

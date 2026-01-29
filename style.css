@@ -1040,10 +1040,6 @@ body::after {
     border-color: #8B0000;
 }
 
-.department-other-input {
-    margin-top: 8px;
-}
-
 .form-group input[type="text"]:focus {
     outline: none;
     border-color: #8B0000;
