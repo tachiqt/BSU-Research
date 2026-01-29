@@ -10,11 +10,37 @@ const CACHE_VERSION_KEY = 'bsu_research_cache_version';
 const CACHE_VERSION = 2; // Bump when backend adds colleges/department data so old cache is refetched
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+// Clear cache when user closes the website (tab/window), not when navigating between pages
+function clearCacheOnClose() {
+    try {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+        localStorage.removeItem(CACHE_VERSION_KEY);
+    } catch (e) {
+        console.warn('Could not clear cache:', e);
+    }
+}
+
 window.addEventListener('DOMContentLoaded', function() {
     setCurrentDate();
     initHamburgerMenu();
     initYearFilter();
     loadAllData();
+    // Reset internal-nav flag so we can detect real close vs in-site navigation
+    sessionStorage.removeItem('internal_nav');
+    // Mark internal navigation so we don't clear cache when switching Dashboard/Publications/Faculty
+    document.querySelectorAll('a[href="index.html"], a[href="publications.html"], a[href="faculty.html"]').forEach(function(a) {
+        a.addEventListener('click', function() {
+            sessionStorage.setItem('internal_nav', '1');
+        });
+    });
+});
+
+window.addEventListener('beforeunload', function() {
+    if (!sessionStorage.getItem('internal_nav')) {
+        clearCacheOnClose();
+    }
+    sessionStorage.removeItem('internal_nav');
 });
 
 // Check if cached data is still valid (age and version)

@@ -206,9 +206,19 @@
                 : 'http://localhost:5000/api';
         const CACHE_KEY = 'bsu_research_data';
         const CACHE_TIMESTAMP_KEY = 'bsu_research_data_timestamp';
+        const CACHE_VERSION_KEY = 'bsu_research_cache_version';
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-        // Check if cached data is still valid
+        function clearCacheOnClose() {
+            try {
+                localStorage.removeItem(CACHE_KEY);
+                localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+                localStorage.removeItem(CACHE_VERSION_KEY);
+            } catch (e) {
+                console.warn('Could not clear cache:', e);
+            }
+        }
+
         function isCacheValid() {
             const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
             if (!timestamp) return false;
@@ -216,7 +226,6 @@
             return age < CACHE_DURATION;
         }
 
-        // Get cached data
         function getCachedData() {
             const cached = localStorage.getItem(CACHE_KEY);
             if (cached) {
@@ -230,7 +239,6 @@
             return null;
         }
 
-        // Store data in cache
         function setCachedData(data) {
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
             localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
@@ -245,6 +253,19 @@
             initHamburgerMenu();
             initYearFilter();
             loadPublications();
+            sessionStorage.removeItem('internal_nav');
+            document.querySelectorAll('a[href="index.html"], a[href="publications.html"], a[href="faculty.html"]').forEach(function(a) {
+                a.addEventListener('click', function() {
+                    sessionStorage.setItem('internal_nav', '1');
+                });
+            });
+        });
+
+        window.addEventListener('beforeunload', function() {
+            if (!sessionStorage.getItem('internal_nav')) {
+                clearCacheOnClose();
+            }
+            sessionStorage.removeItem('internal_nav');
         });
 
         function initHamburgerMenu() {
@@ -268,7 +289,6 @@
             sidebarOverlay?.addEventListener('click', closeMenu);
         }
 
-        // Load all data if not cached
         async function ensureDataLoaded() {
             const cachedData = getCachedData();
             if (cachedData && cachedData.publications) {
@@ -276,7 +296,6 @@
                 return;
             }
             
-            // Fetch fresh data
             try {
                 const response = await fetch(`${API_BASE_URL}/all-data`);
                 if (!response.ok) {
@@ -427,16 +446,13 @@
             const newPage = currentPage + direction;
             if (newPage >= 1 && newPage <= totalPages) {
                 currentPage = newPage;
-                // Show skeleton loaders like initial load
                 showSkeletonLoaders();
                 loadPublications();
             }
         }
 
         async function loadPublications() {
-            // Ensure data is loaded
             await ensureDataLoaded();
-            
             const yearFilter = document.getElementById('yearFilterTitles');
             const selectedYear = yearFilter ? yearFilter.value : '';
             
@@ -448,13 +464,10 @@
             paginationContainer.style.display = 'none';
             
             try {
-                // Get cached data for organization name and years
                 const cachedData = getCachedData();
                 if (cachedData && cachedData.organization_name) {
                     document.getElementById('organizationName').textContent = cachedData.organization_name;
                 }
-                
-                // Filter publications by year if specified
                 let filteredPublications = allPublications;
                 if (selectedYear) {
                     try {
@@ -477,7 +490,6 @@
                     }
                 }
                 
-                // Calculate pagination
                 const limit = 10;
                 totalCount = filteredPublications.length;
                 totalPages = Math.ceil(totalCount / limit);
@@ -486,7 +498,6 @@
                 const endIdx = startIdx + limit;
                 const paginatedPublications = filteredPublications.slice(startIdx, endIdx);
                 
-                // Update pagination UI
                 document.getElementById('currentPage').textContent = currentPage;
                 document.getElementById('totalPages').textContent = totalPages;
                 document.getElementById('showingCount').textContent = paginatedPublications.length;
@@ -500,7 +511,6 @@
                     paginationContainer.style.display = 'none';
                 }
                 
-                // Update stats
                 document.getElementById('totalCount').textContent = totalCount;
                 if (selectedYear) {
                     document.getElementById('filteredYear').textContent = selectedYear;
@@ -510,7 +520,6 @@
                 }
                 statsContainer.style.display = 'flex';
                 
-                // Update year filter dropdown
                 if (cachedData && cachedData.dashboard_stats && cachedData.dashboard_stats.available_years && yearFilter) {
                     const currentValue = yearFilter.value;
                     yearFilter.innerHTML = '<option value="">All Years</option>';
@@ -573,20 +582,15 @@
             }
         }
 
-        // Refresh data from API
         async function refreshData() {
-            // Clear cache
             localStorage.removeItem(CACHE_KEY);
             localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-            
-            // Reload data
             allPublications = [];
             currentPage = 1;
             await ensureDataLoaded();
             await loadPublications();
         }
 
-        // Removed sign-out functionality - no authentication needed
     </script>
 </body>
 </html>

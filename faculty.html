@@ -217,6 +217,34 @@
         </div>
     </div>
 
+    <script>
+        (function() {
+            var CACHE_KEY = 'bsu_research_data';
+            var CACHE_TIMESTAMP_KEY = 'bsu_research_data_timestamp';
+            var CACHE_VERSION_KEY = 'bsu_research_cache_version';
+            function clearCacheOnClose() {
+                try {
+                    localStorage.removeItem(CACHE_KEY);
+                    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+                    localStorage.removeItem(CACHE_VERSION_KEY);
+                } catch (e) {}
+                }
+            window.addEventListener('DOMContentLoaded', function() {
+                sessionStorage.removeItem('internal_nav');
+                document.querySelectorAll('a[href="index.html"], a[href="publications.html"], a[href="faculty.html"]').forEach(function(a) {
+                    a.addEventListener('click', function() {
+                        sessionStorage.setItem('internal_nav', '1');
+                    });
+                });
+            });
+            window.addEventListener('beforeunload', function() {
+                if (!sessionStorage.getItem('internal_nav')) {
+                    clearCacheOnClose();
+                }
+                sessionStorage.removeItem('internal_nav');
+            });
+        })();
+    </script>
     <script src="faculty.js"></script>
 </body>
 </html>
