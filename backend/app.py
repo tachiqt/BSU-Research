@@ -9,10 +9,31 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Initialize database on startup
+# Initialize database on startup and auto-seed from Excel if empty (e.g. on Render/Replit)
 try:
-    from database import init_database
+    from database import init_database, get_faculty_count, import_faculty_from_list
     init_database()
+    if get_faculty_count() == 0:
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(backend_dir)
+        # Try multiple paths: repo root (../img/ref.xlsx), then backend folder (ref.xlsx)
+        for excel_path in [
+            os.path.join(project_root, 'img', 'ref.xlsx'),
+            os.path.join(backend_dir, 'ref.xlsx'),
+        ]:
+            if os.path.exists(excel_path):
+                try:
+                    from faculty_reader import load_faculty_from_excel
+                    faculty_list = load_faculty_from_excel(excel_path, sheet_name=None)
+                    if faculty_list:
+                        result = import_faculty_from_list(faculty_list, clear_existing=True, skip_duplicates=False)
+                        print(f"Auto-seeded {result['imported']} faculty from {excel_path}")
+                    break
+                except Exception as seed_err:
+                    print(f"Auto-seed from {excel_path} failed: {seed_err}")
+                break
+        else:
+            print("No ref.xlsx found for auto-seed (checked ../img/ref.xlsx and backend/ref.xlsx)")
 except Exception as e:
     print(f"Warning: Could not initialize database: {e}")
 
@@ -938,6 +959,41 @@ def refresh_faculty_from_excel():
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+@app.route('/api/faculty/seed', methods=['POST'])
+def seed_faculty_from_default():
+    """
+    Load faculty from default Excel (ref.xlsx) and import into DB.
+    Use this when the database is empty on deploy (e.g. Render/Replit).
+    Tries ../img/ref.xlsx then backend/ref.xlsx.
+    """
+    try:
+        from database import import_faculty_from_list, get_faculty_count
+        from faculty_reader import load_faculty_from_excel
+        
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(backend_dir)
+        for excel_path in [
+            os.path.join(project_root, 'img', 'ref.xlsx'),
+            os.path.join(backend_dir, 'ref.xlsx'),
+        ]:
+            if os.path.exists(excel_path):
+                faculty_list = load_faculty_from_excel(excel_path, sheet_name=None)
+                if not faculty_list:
+                    return jsonify({'error': 'No faculty rows in Excel file'}), 400
+                result = import_faculty_from_list(faculty_list, clear_existing=True, skip_duplicates=False)
+                count = get_faculty_count()
+                return jsonify({
+                    'message': f"Loaded {result['imported']} faculty from default Excel.",
+                    'imported_count': result['imported'],
+                    'total_in_database': count
+                }), 200
+        return jsonify({
+            'error': 'Default Excel file (ref.xlsx) not found. Add ref.xlsx to backend/ or ensure img/ref.xlsx exists in the repo.'
+        }), 404
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 @app.route('/api/faculty/count', methods=['GET'])
 def get_faculty_count_endpoint():

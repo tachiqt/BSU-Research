@@ -1099,6 +1099,31 @@ body::after {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.seed-faculty-banner {
+    background: #fff8e1;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.seed-faculty-banner p {
+    margin: 0;
+    color: #333;
+    flex: 1 1 200px;
+}
+
+.seed-faculty-banner code {
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
 .faculty-controls {
     display: flex;
     gap: 10px;

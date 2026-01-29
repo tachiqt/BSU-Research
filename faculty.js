@@ -77,17 +77,49 @@ function showFetchErrorHint(error, context) {
     }
 }
 
-// Load faculty count
+// Load faculty count and show/hide "Load default faculty" banner when count is 0
 async function loadFacultyCount() {
     try {
         const response = await fetch(`${API_BASE_URL}/faculty/count`);
         const data = await response.json();
         if (data.count !== undefined) {
-            document.getElementById('facultyCount').textContent = data.count;
+            const countEl = document.getElementById('facultyCount');
+            if (countEl) countEl.textContent = data.count;
+            const banner = document.getElementById('seedFacultyBanner');
+            if (banner) banner.style.display = data.count === 0 ? 'flex' : 'none';
         }
     } catch (error) {
         console.error('Error loading faculty count:', error);
         showFetchErrorHint(error, null);
+    }
+}
+
+// Seed faculty from default Excel (ref.xlsx) - for Render/Replit when DB is empty
+async function seedFacultyFromDefault() {
+    const btn = document.getElementById('seedFacultyBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading...';
+    }
+    try {
+        const response = await fetch(`${API_BASE_URL}/faculty/seed`, { method: 'POST' });
+        const data = await response.json();
+        if (response.ok) {
+            showMessage(data.message || `Loaded ${data.imported_count} faculty.`, 'success');
+            await loadFacultyCount();
+            await loadFacultyList();
+            const banner = document.getElementById('seedFacultyBanner');
+            if (banner) banner.style.display = 'none';
+        } else {
+            showMessage(data.error || 'Failed to load default faculty list', 'error');
+        }
+    } catch (error) {
+        showFetchErrorHint(error, 'Load default faculty');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-database"></i> Load default faculty list';
+        }
     }
 }
 
