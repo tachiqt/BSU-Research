@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSU Research Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+   
+    <header class="main-header">
+        <div class="header-content">
+            <div class="university-logo-section">
+                <img src="img/dione-newheader.png" alt="Batangas State University" class="university-logo">
+            </div>
+            
+        </div>
+        <div class="header-nav">
+            <div class="nav-left">
+                <button class="hamburger-menu" id="menuToggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="nav-right">
+            </div>
+        </div>
+    </header>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar-menu" id="sidebarMenu">
+        <div class="sidebar-header">
+            <h3>Navigation</h3>
+            <button class="sidebar-close" id="sidebarClose">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+        <ul>
+            <li><a href="index.html" id="navDashboard" class="active">Dashboard</a></li>
+            <li><a href="publications.html" id="navPublications">Research Publications</a></li>
+            <li><a href="faculty.html" id="navFaculty">Faculty Management</a></li>
+        </ul>
+    </div>
+
+    <main class="main-content">
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading data...</p>
+            </div>
+        </div>
+        <div class="year-filter-container">
+            <label for="yearFilter" class="year-filter-label">Filter by Year:</label>
+            <select id="yearFilter" class="year-filter-select">
+                <option value="">All Years</option>
+            </select>
+        </div>
+        <div class="dashboard-row top-row">
+            <div class="dashboard-box large-box publications-box">
+                <h2 class="box-title">NUMBER OF PUBLICATIONS<br>AS OF ( <span id="currentDate"></span> )</h2>
+                <div class="box-value large-value">--</div>
+            </div>
+
+            <div class="dashboard-box large-box accomplishments-box">
+                <h2 class="box-title">ACCOMPLISHMENTS</h2>
+                <div class="accomplishments-list">
+                    <div class="accomplishment-item">
+                        <span class="quarter-label">QUARTER 1</span>
+                        <span class="quarter-value">--</span>
+                    </div>
+                    <div class="accomplishment-item">
+                        <span class="quarter-label">QUARTER 2</span>
+                        <span class="quarter-value">--</span>
+                    </div>
+                    <div class="accomplishment-item">
+                        <span class="quarter-label">QUARTER 3</span>
+                        <span class="quarter-value">--</span>
+                    </div>
+                    <div class="accomplishment-item">
+                        <span class="quarter-label">QUARTER 4</span>
+                        <span class="quarter-value">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-row bottom-row">
+            <div class="dashboard-box college-box">
+                <h2 class="box-title">PUBLICATION FROM COLLEGE OF ENGINEERING</h2>
+                <div class="box-value">--</div>
+            </div>
+            <div class="dashboard-box college-box">
+                <h2 class="box-title">PUBLICATION FROM COLLEGE OF INFORMATICS & COMPUTING SCIENCES</h2>
+                <div class="box-value">--</div>
+            </div>
+
+            <div class="dashboard-box college-box">
+                <h2 class="box-title">PUBLICATION FROM COLLEGE OF ENGINEERING TECHNOLOGY</h2>
+                <div class="box-value">--</div>
+            </div>
+            <div class="dashboard-box college-box">
+                <h2 class="box-title">PUBLICATION FROM COLLEGE OF ARCHITECTURE and DESIGN</h2>
+                <div class="box-value">--</div>
+            </div>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

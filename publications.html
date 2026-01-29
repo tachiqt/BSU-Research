@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSU Research Publications - Titles</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <div class="university-logo-section">
+                <img src="img/dione-newheader.png" alt="Batangas State University" class="university-logo">
+            </div>
+        </div>
+        <div class="header-nav">
+            <div class="nav-left">
+                <button class="hamburger-menu" id="menuToggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="nav-right">
+            </div>
+        </div>
+    </header>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar-menu" id="sidebarMenu">
+        <div class="sidebar-header">
+            <h3>Navigation</h3>
+            <button class="sidebar-close" id="sidebarClose">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+        <ul>
+            <li><a href="index.html" id="navDashboard">Dashboard</a></li>
+            <li><a href="publications.html" id="navPublications" class="active">Research Publications</a></li>
+            <li><a href="faculty.html" id="navFaculty">Faculty Management</a></li>
+        </ul>
+    </div>
+
+    <main class="main-content">
+        <div class="publications-container">
+            <div class="publications-header">
+                <h1>Research Publications</h1>
+                <div class="subtitle" id="organizationName">Batangas State University</div>
+            </div>
+
+            <div class="publications-controls">
+                <label for="yearFilterTitles">Filter by Year:</label>
+                <select id="yearFilterTitles">
+                    <option value="">All Years</option>
+                </select>
+                <button onclick="refreshData()">
+                    <i class="fa fa-refresh"></i> Refresh
+                </button>
+            </div>
+
+            <div class="publications-stats" id="publicationsStats" style="display: none;">
+                <div class="stat-item">
+                    Total Publications: <strong id="totalCount">0</strong>
+                </div>
+                <div class="stat-item" id="yearStat" style="display: none;">
+                    Filtered Year: <strong id="filteredYear"></strong>
+                </div>
+            </div>
+
+            <div id="publicationsListWrapper" style="position: relative;">
+                <div id="publicationsList" class="publications-list loading-skeleton">
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title-short"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title-short"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title-short"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title-short"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="skeleton-item" style="border-bottom: none;">
+                    <div class="skeleton-number"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-title-short"></div>
+                        <div class="skeleton-meta">
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                            <div class="skeleton-meta-item"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pagination" id="pagination" style="display: none;">
+                <button id="prevPage" onclick="changePage(-1)">
+                    <i class="fa fa-chevron-left"></i> Previous
+                </button>
+                <div class="pagination-info">
+                    Page <strong id="currentPage">1</strong> of <strong id="totalPages">1</strong>
+                    (<strong id="showingCount">0</strong> of <strong id="totalCountDisplay">0</strong> publications)
+                </div>
+                <button id="nextPage" onclick="changePage(1)">
+                    Next <i class="fa fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const CACHE_KEY = 'bsu_research_data';
+        const CACHE_TIMESTAMP_KEY = 'bsu_research_data_timestamp';
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+        // Check if cached data is still valid
+        function isCacheValid() {
+            const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+            if (!timestamp) return false;
+            const age = Date.now() - parseInt(timestamp);
+            return age < CACHE_DURATION;
+        }
+
+        // Get cached data
+        function getCachedData() {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                try {
+                    return JSON.parse(cached);
+                } catch (e) {
+                    console.error('Error parsing cached data:', e);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // Store data in cache
+        function setCachedData(data) {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        }
+
+        let currentPage = 1;
+        let totalPages = 1;
+        let totalCount = 0;
+        let allPublications = [];
+
+        window.addEventListener('DOMContentLoaded', function() {
+            initHamburgerMenu();
+            initYearFilter();
+            loadPublications();
+        });
+
+        function initHamburgerMenu() {
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebarMenu = document.getElementById('sidebarMenu');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const sidebarClose = document.getElementById('sidebarClose');
+
+            function openMenu() {
+                sidebarMenu.classList.add('active');
+                sidebarOverlay.classList.add('active');
+            }
+
+            function closeMenu() {
+                sidebarMenu.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+            }
+
+            menuToggle?.addEventListener('click', openMenu);
+            sidebarClose?.addEventListener('click', closeMenu);
+            sidebarOverlay?.addEventListener('click', closeMenu);
+        }
+
+        // Load all data if not cached
+        async function ensureDataLoaded() {
+            const cachedData = getCachedData();
+            if (cachedData && cachedData.publications) {
+                allPublications = cachedData.publications;
+                return;
+            }
+            
+            // Fetch fresh data
+            try {
+                const response = await fetch(`${API_BASE_URL}/all-data`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                setCachedData(data);
+                allPublications = data.publications || [];
+            } catch (error) {
+                console.error('Error loading data:', error);
+                allPublications = [];
+            }
+        }
+
+        function initYearFilter() {
+            const yearFilter = document.getElementById('yearFilterTitles');
+            if (yearFilter) {
+                yearFilter.addEventListener('change', function() {
+                    currentPage = 1; 
+                    loadPublications();
+                });
+            }
+        }
+
+        function showSkeletonLoaders() {
+            const listContainer = document.getElementById('publicationsList');
+            if (listContainer) {
+                listContainer.classList.add('loading-skeleton');
+                listContainer.innerHTML = `
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title-short"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title-short"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title-short"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title-short"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item" style="border-bottom: none;">
+                        <div class="skeleton-number"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title-short"></div>
+                            <div class="skeleton-meta">
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                                <div class="skeleton-meta-item"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                // Show skeleton loaders like initial load
+                showSkeletonLoaders();
+                loadPublications();
+            }
+        }
+
+        async function loadPublications() {
+            // Ensure data is loaded
+            await ensureDataLoaded();
+            
+            const yearFilter = document.getElementById('yearFilterTitles');
+            const selectedYear = yearFilter ? yearFilter.value : '';
+            
+            const listContainer = document.getElementById('publicationsList');
+            const statsContainer = document.getElementById('publicationsStats');
+            const paginationContainer = document.getElementById('pagination');
+            listContainer.classList.add('loading-skeleton');
+            statsContainer.style.display = 'none';
+            paginationContainer.style.display = 'none';
+            
+            try {
+                // Get cached data for organization name and years
+                const cachedData = getCachedData();
+                if (cachedData && cachedData.organization_name) {
+                    document.getElementById('organizationName').textContent = cachedData.organization_name;
+                }
+                
+                // Filter publications by year if specified
+                let filteredPublications = allPublications;
+                if (selectedYear) {
+                    try {
+                        const filterYear = parseInt(selectedYear);
+                        filteredPublications = allPublications.filter(pub => {
+                            const pubYear = pub.year;
+                            if (!pubYear) return false;
+                            
+                            let yearValue;
+                            if (typeof pubYear === 'string') {
+                                yearValue = parseInt(pubYear.split('/')[0]) || parseInt(pubYear);
+                            } else {
+                                yearValue = parseInt(pubYear);
+                            }
+                            
+                            return yearValue === filterYear;
+                        });
+                    } catch (e) {
+                        console.error('Error filtering by year:', e);
+                    }
+                }
+                
+                // Calculate pagination
+                const limit = 10;
+                totalCount = filteredPublications.length;
+                totalPages = Math.ceil(totalCount / limit);
+                
+                const startIdx = (currentPage - 1) * limit;
+                const endIdx = startIdx + limit;
+                const paginatedPublications = filteredPublications.slice(startIdx, endIdx);
+                
+                // Update pagination UI
+                document.getElementById('currentPage').textContent = currentPage;
+                document.getElementById('totalPages').textContent = totalPages;
+                document.getElementById('showingCount').textContent = paginatedPublications.length;
+                document.getElementById('totalCountDisplay').textContent = totalCount;
+                document.getElementById('prevPage').disabled = currentPage <= 1;
+                document.getElementById('nextPage').disabled = currentPage >= totalPages;
+                
+                if (totalPages > 1) {
+                    paginationContainer.style.display = 'flex';
+                } else {
+                    paginationContainer.style.display = 'none';
+                }
+                
+                // Update stats
+                document.getElementById('totalCount').textContent = totalCount;
+                if (selectedYear) {
+                    document.getElementById('filteredYear').textContent = selectedYear;
+                    document.getElementById('yearStat').style.display = 'block';
+                } else {
+                    document.getElementById('yearStat').style.display = 'none';
+                }
+                statsContainer.style.display = 'flex';
+                
+                // Update year filter dropdown
+                if (cachedData && cachedData.dashboard_stats && cachedData.dashboard_stats.available_years && yearFilter) {
+                    const currentValue = yearFilter.value;
+                    yearFilter.innerHTML = '<option value="">All Years</option>';
+                    cachedData.dashboard_stats.available_years.forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = year;
+                        yearFilter.appendChild(option);
+                    });
+                    if (currentValue) {
+                        yearFilter.value = currentValue;
+                    }
+                }
+                
+                listContainer.classList.remove('loading-skeleton');
+                
+                if (paginatedPublications.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa fa-file-alt"></i>
+                            <p>No publications found</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render publications
+                let html = '';
+                paginatedPublications.forEach((pub, idx) => {
+                    const globalNumber = startIdx + idx + 1;
+                    html += `
+                        <div class="publication-item">
+                            <span class="publication-number">${globalNumber}</span>
+                            <div class="publication-content">
+                                <div class="publication-title">
+                                    ${pub.link ? `<a href="${pub.link}" target="_blank">${pub.title}</a>` : pub.title}
+                                </div>
+                                <div class="publication-meta">
+                                    ${pub.year ? `<span><i class="fa fa-calendar"></i> ${pub.year}</span>` : ''}
+                                    ${pub.authors ? `<span><i class="fa fa-users"></i> ${pub.authors.substring(0, 100)}${pub.authors.length > 100 ? '...' : ''}</span>` : ''}
+                                    ${pub.venue ? `<span><i class="fa fa-book"></i> ${pub.venue}</span>` : ''}
+                                    ${pub.citations !== undefined ? `<span class="publication-citations"><i class="fa fa-quote-right"></i> ${pub.citations} citations</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                listContainer.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading publications:', error);
+                listContainer.classList.remove('loading-skeleton');
+                listContainer.innerHTML = `
+                    <div class="error-state">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <p>Error loading publications. Please refresh the page.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Refresh data from API
+        async function refreshData() {
+            // Clear cache
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+            
+            // Reload data
+            allPublications = [];
+            currentPage = 1;
+            await ensureDataLoaded();
+            await loadPublications();
+        }
+
+        // Removed sign-out functionality - no authentication needed
+    </script>
+</body>
+</html>

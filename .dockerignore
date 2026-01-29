@@ -1,0 +1,29 @@
+# Virtual environments
+backend/venv/
+venv/
+env/
+.env
+.env.local
+
+# Git and IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Docs and extras (optional: remove if you want them in image)
+*.md
+!backend/MIGRATION_GUIDE.md
+
+# Database (optional: exclude so each container starts fresh, or mount a volume)
+backend/faculty.db
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
