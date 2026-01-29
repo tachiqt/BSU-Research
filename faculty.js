@@ -15,7 +15,7 @@ const DEFAULT_DEPARTMENTS = [
     'College of Engineering',
     'College of Informatics & Computing Sciences',
     'College of Engineering Technology',
-    'College of Architecture and Design'
+    'College of Architecture Fine Arts and Design'
 ];
 
 // Initialize page
