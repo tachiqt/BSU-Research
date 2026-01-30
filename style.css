@@ -1006,6 +1006,48 @@ body::after {
     gap: 20px;
 }
 
+.excel-format-label {
+    font-weight: 600;
+    color: #333;
+    margin: 4px 0 8px 0;
+    font-size: 0.95rem;
+}
+
+.excel-format-preview {
+    margin: 8px 0 16px 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fafafa;
+}
+
+.format-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.format-preview-table th,
+.format-preview-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.format-preview-table th {
+    background: #8B0000;
+    color: white;
+    font-weight: 600;
+}
+
+.format-preview-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.format-preview-table tbody tr:hover {
+    background: #f0f0f0;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;

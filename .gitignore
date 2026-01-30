@@ -44,6 +44,9 @@ database.db
 .DS_Store
 Thumbs.db
 
+# Excel temporary/lock files (created when workbook is open)
+~$*
+
 # Replit
 .pythonlibs/
 .upm/

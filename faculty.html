@@ -102,9 +102,35 @@
                                 <div class="form-group">
                                     <label for="excelFile">Excel File <span class="required">*</span></label>
                                     <input type="file" id="excelFile" name="file" accept=".xlsx,.xls" required>
-                                    <small>Upload .xlsx or .xls file with columns: Name, Department, Position</small>
+                                    <small>Upload .xlsx or .xls file with the columns below.</small>
                                 </div>
-                                
+                                <p class="excel-format-label">Expected table format:</p>
+                                <div class="excel-format-preview">
+                                    <table class="format-preview-table">
+                                        <thead>
+                                            <tr>
+                                                <th>NAME</th>
+                                                <th>POSITION/DESIGNATION</th>
+                                                <th>HOURLY RATE</th>
+                                                <th>DEPARTMENT</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Doe, John Michael</td>
+                                                <td>Professor</td>
+                                                <td>150.00</td>
+                                                <td>College of Engineering</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Smith, Jane A.</td>
+                                                <td>Associate Professor</td>
+                                                <td>120.00</td>
+                                                <td>College of Informatics and Computing Sciences</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             <div class="form-group">
                                 <label for="sheetName">Sheet Name (Optional)</label>
                                 <input type="text" id="sheetName" name="sheet_name" value="" 
