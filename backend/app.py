@@ -1025,9 +1025,22 @@ def get_faculty_list():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def _get_ref_xlsx_path():
+    """Return path to ref.xlsx if it exists (img/ref.xlsx or backend/ref.xlsx)."""
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(backend_dir)
+    for path in [
+        os.path.join(project_root, 'img', 'ref.xlsx'),
+        os.path.join(backend_dir, 'ref.xlsx'),
+    ]:
+        if os.path.exists(path):
+            return path
+    return None
+
+
 @app.route('/api/faculty/add', methods=['POST'])
 def add_faculty_member():
-    """Add a single faculty member. Uses database when available; falls back to appending to Excel if database is not available."""
+    """Add a single faculty member. Always appends to Excel (ref.xlsx) when present so data persists on Replit/Render; also adds to database when available."""
     try:
         data = request.get_json()
         name = data.get('name', '').strip()
@@ -1039,58 +1052,61 @@ def add_faculty_member():
         if not department:
             return jsonify({'error': 'Department is required'}), 400
         
-        # Try database first
+        excel_path = _get_ref_xlsx_path()
+        added_to_excel = False
+        
+        # 1) Always append to Excel first when ref.xlsx exists (persistent on Replit/Render)
+        if excel_path:
+            try:
+                from faculty_reader import append_faculty_to_excel
+                result = append_faculty_to_excel(
+                    excel_path, name, department, position,
+                    sheet_name=None, skip_duplicate=True
+                )
+                if result.get('duplicate'):
+                    return jsonify({
+                        'error': f'Faculty member "{name}" already exists',
+                        'duplicate': True
+                    }), 409
+                added_to_excel = True
+            except Exception as excel_err:
+                print(f"Warning: Could not append to Excel: {excel_err}")
+                # Continue; we may still add to DB below
+        
+        # 2) Also add to database when available (for fast reads)
         try:
             from database import add_faculty
             faculty_id, is_new = add_faculty(name, department, position, skip_duplicate=True)
-            
-            if not is_new:
+            if not is_new and not added_to_excel:
                 return jsonify({
                     'error': f'Faculty member "{name}" already exists',
                     'duplicate': True
                 }), 409
-            
+            if not is_new and added_to_excel:
+                # Excel had the new row; DB already had them (e.g. re-seed). Still success.
+                pass
             return jsonify({
-                'message': 'Faculty member added successfully',
+                'message': 'Faculty member added successfully' + (' (saved to Excel for persistence)' if added_to_excel else ''),
                 'id': faculty_id,
                 'name': name,
                 'department': department,
-                'position': position
+                'position': position,
+                'added_to_excel': added_to_excel
             }), 201
         except Exception as db_err:
-            # Database unavailable or failed — append to Excel instead
-            backend_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.dirname(backend_dir)
-            for excel_path in [
-                os.path.join(project_root, 'img', 'ref.xlsx'),
-                os.path.join(backend_dir, 'ref.xlsx'),
-            ]:
-                if os.path.exists(excel_path):
-                    try:
-                        from faculty_reader import append_faculty_to_excel
-                        result = append_faculty_to_excel(
-                            excel_path, name, department, position,
-                            sheet_name=None, skip_duplicate=True
-                        )
-                        if result.get('duplicate'):
-                            return jsonify({
-                                'error': f'Faculty member "{name}" already exists in Excel',
-                                'duplicate': True
-                            }), 409
-                        return jsonify({
-                            'message': 'Faculty member added to Excel (database unavailable).',
-                            'added_to_excel': True,
-                            'name': name,
-                            'department': department,
-                            'position': position
-                        }), 201
-                    except Exception as excel_err:
-                        return jsonify({
-                            'error': f'Database and Excel both failed. Database: {str(db_err)}. Excel: {str(excel_err)}'
-                        }), 500
+            if added_to_excel:
+                return jsonify({
+                    'message': 'Faculty member added to Excel (database unavailable; data will persist across restarts).',
+                    'name': name,
+                    'department': department,
+                    'position': position,
+                    'added_to_excel': True
+                }), 201
             return jsonify({
-                'error': f'Database unavailable ({str(db_err)}). No ref.xlsx found to add faculty to Excel.'
-            }), 503
+                'error': f'Could not add faculty. Database: {str(db_err)}. ' + (
+                    'No ref.xlsx found to save to Excel.' if not excel_path else 'Excel append also failed.'
+                )
+            }), 500
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
