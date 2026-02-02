@@ -177,11 +177,13 @@ def fetch_scopus_data(organization_name=None, organization_id=None, include_all_
         else:
             base_query = 'AFFIL("Batangas State University")'
         query = base_query
+        # Use view=COMPLETE to retrieve all authors per publication (STANDARD returns only first author).
+        # Do not set 'field' — it overrides view and would revert to truncated author list.
         params = {
             'query': query,
-            'count': 25,  
+            'count': 25,
             'start': 0,
-            'field': 'dc:title,dc:creator,prism:publicationName,prism:coverDate,prism:coverDisplayDate,prism:doi,citedby-count,affiliation,author,dc:identifier,subtypeDescription,subtype,subject-area,prism:aggregationType'
+            'view': 'COMPLETE',
         }
         
         all_publications = []
@@ -228,6 +230,12 @@ def fetch_scopus_data(organization_name=None, organization_id=None, include_all_
                         }
                 else:
                     error_detail = response.text[:200] if not is_html_error else "HTML error page received"
+                    # If COMPLETE view is not allowed (401/403), fall back to STANDARD + field (may return only first author)
+                    if response.status_code in (401, 403) and start == 0 and params.get('view') == 'COMPLETE':
+                        print(f"COMPLETE view not available ({response.status_code}), falling back to STANDARD view (author list may be truncated).")
+                        params.pop('view', None)
+                        params['field'] = 'dc:title,dc:creator,prism:publicationName,prism:coverDate,prism:coverDisplayDate,prism:doi,prism:publisher,dc:publisher,citedby-count,affiliation,author,dc:identifier,subtypeDescription,subtype,subject-area,prism:aggregationType'
+                        continue  # retry same page with STANDARD
                     print(f"{error_msg} - {error_detail}")
                     if all_publications:
                         print(f"Returning {len(all_publications)} publications retrieved before error")
@@ -397,6 +405,19 @@ def fetch_scopus_data(organization_name=None, organization_id=None, include_all_
                 elif isinstance(subject_area_entry, str):
                     subject_areas.append(subject_area_entry.strip())
                 
+                # Use actual publisher only (e.g. Elsevier B.V.); do not fall back to journal/conference title.
+                # Try prism:publisher first (standard), then dc:publisher, then plain publisher.
+                publisher = (entry.get('prism:publisher') or entry.get('dc:publisher') or entry.get('publisher') or '').strip()
+                
+                # DEBUG: Check why authors/publisher might be missing
+                if len(all_publications) == 0:
+                    print(f"DEBUG: First entry keys: {list(entry.keys())}")
+                    print(f"DEBUG: prism:publisher: {repr(entry.get('prism:publisher'))}")
+                    print(f"DEBUG: dc:publisher: {repr(entry.get('dc:publisher'))}")
+                    print(f"DEBUG: publisher: {repr(entry.get('publisher'))}")
+                    print(f"DEBUG: authors raw: {repr(entry.get('author') or entry.get('authors'))}")
+                    print(f"DEBUG: dc:creator raw: {repr(entry.get('dc:creator'))}")
+                    print(f"DEBUG: extracted authors: {authors}")
                 publication = {
                     'title': title,
                     'authors': authors, 
@@ -406,6 +427,7 @@ def fetch_scopus_data(organization_name=None, organization_id=None, include_all_
                     'day': day,
                     'date': date_str,
                     'venue': venue,
+                    'publisher': publisher,
                     'citations': citations,
                     'link': link,
                     'doi': doi,

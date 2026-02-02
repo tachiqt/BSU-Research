@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+from io import BytesIO
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -1230,6 +1231,224 @@ def upload_excel_faculty():
             'traceback': traceback.format_exc()
         }), 500
 
+# --- Report export (template-based Excel) ---
+@app.route('/api/report/preview', methods=['GET'])
+def report_preview():
+    """
+    Preview report data. Query params: year (filter publications), quarter, campus,
+    organization_name, organization_id. Returns publications that would go in the report.
+    """
+    try:
+        year_filter = request.args.get('year', '').strip()
+        quarter = request.args.get('quarter', '4th')
+        campus = request.args.get('campus', 'ALANGILAN')
+        organization_name = request.args.get('organization_name', 'Batangas State University')
+        organization_id = request.args.get('organization_id')
+        fiscal_year = request.args.get('fiscal_year', str(datetime.now().year))
+
+        scopus_data = fetch_scopus_data(
+            organization_name=organization_name if organization_name else None,
+            organization_id=organization_id if organization_id else None
+        )
+        if scopus_data.get('error'):
+            return jsonify({'error': scopus_data.get('error'), 'publications': []}), 503
+
+        all_publications = scopus_data.get('publications', [])
+        # Optional: map college from faculty
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        default_excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
+        pub_id_to_college = {}
+        if os.path.exists(default_excel_path):
+            try:
+                from faculty_reader import load_faculty_from_db_or_excel
+                faculty_list = load_faculty_from_db_or_excel(default_excel_path, sheet_name='Reference', prefer_db=True)
+                if faculty_list:
+                    faculty_results = filter_publications_by_faculty(all_publications, faculty_list)
+                    for mpub in faculty_results.get('matched_publications', []):
+                        pub_id = (mpub.get('scopus_id') or mpub.get('title') or '').strip()
+                        depts = mpub.get('matched_departments') or []
+                        if pub_id and depts:
+                            pub_id_to_college[pub_id] = depts[0]
+            except Exception:
+                pass
+
+        # Filter by year (and optionally quarter by month)
+        filtered = []
+        for p in all_publications:
+            pub_year = p.get('year')
+            if pub_year is not None:
+                if isinstance(pub_year, str):
+                    try:
+                        pub_year = int(pub_year.split('/')[0]) if '/' in pub_year else int(pub_year)
+                    except (ValueError, TypeError):
+                        pub_year = None
+            if year_filter:
+                try:
+                    y = int(year_filter)
+                    if pub_year is None or int(pub_year) != y:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            month = p.get('month')
+            # When quarter is "all" or empty, include all quarters of the year; otherwise filter by month
+            quarter_val = (quarter or '').strip().lower()
+            if quarter_val and quarter_val != 'all' and pub_year is not None and month is not None:
+                try:
+                    qnum = {'1st': 1, '2nd': 2, '3rd': 3, '4th': 4}.get(quarter_val, 4)
+                    q_months = {1: (1, 3), 2: (4, 6), 3: (7, 9), 4: (10, 12)}.get(qnum, (10, 12))
+                    m = int(month)
+                    if m < q_months[0] or m > q_months[1]:
+                        continue
+                except (ValueError, TypeError, AttributeError):
+                    pass
+            pub_id = (p.get('scopus_id') or p.get('title') or '').strip()
+            college_campus = pub_id_to_college.get(pub_id) or 'Batangas State University'
+            filtered.append({
+                'title': p.get('title', ''),
+                'authors': p.get('authors', ''),
+                'venue': p.get('venue', ''),
+                'year': p.get('year'),
+                'month': p.get('month'),
+                'college_campus': college_campus,
+                'link': p.get('link', ''),
+                'doi': p.get('doi', ''),
+                'publisher': p.get('publisher', ''),
+            })
+
+        from report_generator import get_preview_data
+        report_rows = get_preview_data([{**p, 'college_campus': p.get('college_campus'), 'month': p.get('month'), 'link': p.get('link'), 'doi': p.get('doi'), 'publisher': p.get('publisher')} for p in filtered])
+
+        quarter_display = 'All' if (quarter or '').strip().lower() == 'all' else quarter
+        return jsonify({
+            'filters': {
+                'fiscal_year': fiscal_year,
+                'quarter': quarter_display,
+                'campus': campus,
+                'year_filter': year_filter or None,
+            },
+            'publications': report_rows,
+            'total_count': len(report_rows),
+        }), 200
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
+@app.route('/api/report/export', methods=['POST'])
+def report_export():
+    """
+    Generate and download report Excel. Body: fiscal_year, quarter, campus, year (filter), publications (optional).
+    """
+    try:
+        data = request.get_json() or {}
+        fiscal_year = data.get('fiscal_year') or str(datetime.now().year)
+        quarter = data.get('quarter', '4th')
+        quarter_val = (quarter or '').strip().lower()
+        quarter_display = 'All' if quarter_val == 'all' else quarter
+        campus = data.get('campus', 'ALANGILAN')
+        year_filter = (data.get('year') or data.get('year_filter') or '').strip()
+        organization_name = data.get('organization_name', 'Batangas State University')
+        organization_id = data.get('organization_id')
+
+        # Prefer preview data when provided so export exactly matches preview count.
+        provided_rows = data.get('publications')
+        report_rows = None
+        if isinstance(provided_rows, list):
+            report_rows = provided_rows
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+
+        from report_generator import build_report, get_preview_data
+
+        if report_rows is None:
+            # Fallback: compute rows server-side (export may not match preview if month data differs)
+            scopus_data = fetch_scopus_data(
+                organization_name=organization_name if organization_name else None,
+                organization_id=organization_id if organization_id else None
+            )
+            if scopus_data.get('error'):
+                return jsonify({'error': scopus_data.get('error')}), 503
+
+            all_publications = scopus_data.get('publications', [])
+            default_excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
+            pub_id_to_college = {}
+            if os.path.exists(default_excel_path):
+                try:
+                    from faculty_reader import load_faculty_from_db_or_excel
+                    faculty_list = load_faculty_from_db_or_excel(default_excel_path, sheet_name='Reference', prefer_db=True)
+                    if faculty_list:
+                        faculty_results = filter_publications_by_faculty(all_publications, faculty_list)
+                        for mpub in faculty_results.get('matched_publications', []):
+                            pub_id = (mpub.get('scopus_id') or mpub.get('title') or '').strip()
+                            depts = mpub.get('matched_departments') or []
+                            if pub_id and depts:
+                                pub_id_to_college[pub_id] = depts[0]
+                except Exception:
+                    pass
+
+            filtered = []
+            for p in all_publications:
+                pub_year = p.get('year')
+                if pub_year is not None and isinstance(pub_year, str):
+                    try:
+                        pub_year = int(pub_year.split('/')[0]) if '/' in pub_year else int(pub_year)
+                    except (ValueError, TypeError):
+                        pub_year = None
+                if year_filter:
+                    try:
+                        y = int(year_filter)
+                        if pub_year is None or int(pub_year) != y:
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+                # When quarter is "all" or empty, include all quarters; otherwise filter by month
+                if quarter_val and quarter_val != 'all':
+                    month = p.get('month')
+                    if pub_year is not None and month is not None:
+                        try:
+                            qnum = {'1st': 1, '2nd': 2, '3rd': 3, '4th': 4}.get(quarter_val, 4)
+                            q_months = {1: (1, 3), 2: (4, 6), 3: (7, 9), 4: (10, 12)}.get(qnum, (10, 12))
+                            m = int(month)
+                            if m < q_months[0] or m > q_months[1]:
+                                continue
+                        except (ValueError, TypeError, AttributeError):
+                            pass
+                pub_id = (p.get('scopus_id') or p.get('title') or '').strip()
+                college_campus = pub_id_to_college.get(pub_id) or 'Batangas State University'
+                filtered.append({
+                    'title': p.get('title', ''),
+                    'authors': p.get('authors', ''),
+                    'venue': p.get('venue', ''),
+                    'year': p.get('year'),
+                    'month': p.get('month'),
+                    'college_campus': college_campus,
+                    'link': p.get('link', ''),
+                    'doi': p.get('doi', ''),
+                    'publisher': p.get('publisher', ''),
+                })
+
+            report_rows = get_preview_data([{**p} for p in filtered])
+        wb = build_report(fiscal_year, quarter_display, campus, report_rows, None, project_root)
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        q_slug = 'All' if quarter_display == 'All' else quarter.replace('th', '').replace('st', '').replace('nd', '').replace('rd', '')
+        filename = f'RESEARCH_AL_Quarterly_Report_{fiscal_year}_Q{q_slug}_{campus}.xlsx'
+        return send_file(
+            buf,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename,
+        )
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
@@ -1256,20 +1475,22 @@ def serve_static_files(filename):
     """Serve static files (HTML, CSS, JS, images)"""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    # Security: Prevent directory traversal
+    # Security: Prevent directory traversal (normpath for .. and leading slash)
     safe_path = os.path.normpath(filename)
-    if '..' in safe_path or safe_path.startswith('/'):
+    if '..' in safe_path or safe_path.startswith('/') or safe_path.startswith('\\'):
         return jsonify({'error': 'Invalid path'}), 403
     
     # Only serve allowed file types
     allowed_extensions = ['.html', '.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.xlsx']
     
     # Check if file has allowed extension or is a known HTML file
-    if any(filename.endswith(ext) for ext in allowed_extensions) or filename in ['index.html', 'publications.html', 'faculty.html']:
+    if any(filename.endswith(ext) for ext in allowed_extensions) or filename in ['index.html', 'publications.html', 'faculty.html', 'reports.html']:
         try:
-            file_path = os.path.join(project_root, safe_path)
+            # Build path for exists check (works on Windows and Unix)
+            file_path = os.path.join(project_root, *filename.split('/'))
             if os.path.exists(file_path) and os.path.isfile(file_path):
-                return send_from_directory(project_root, safe_path)
+                # Use filename with forward slashes so Flask serves correctly on all platforms
+                return send_from_directory(project_root, filename)
         except Exception as e:
             pass
     
