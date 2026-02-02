@@ -1,4 +1,3 @@
-// API Base URL - use relative /api when served from same host (avoids some ad-blocker blocks), else localhost
 const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined && window.API_BASE_URL !== '')
     ? window.API_BASE_URL
     : (typeof window !== 'undefined' && window.location.protocol !== 'file:' && window.location.host !== '')
@@ -10,7 +9,6 @@ let currentPage = 1;
 let allFacultyData = [];
 let filteredFacultyData = [];
 
-// Default departments when DB is empty (match dashboard college names)
 const DEFAULT_DEPARTMENTS = [
     'College of Architecture Fine Arts and Design',
     'College of Informatics and Computing Sciences',
@@ -18,21 +16,17 @@ const DEFAULT_DEPARTMENTS = [
     'College of Engineering Technology'
 ];
 
-// Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     initHamburgerMenu();
     loadDepartments();
     loadFacultyCount();
     loadFacultyList();
-    
-    // Form handlers
     document.getElementById('addFacultyForm').addEventListener('submit', handleAddFaculty);
     document.getElementById('uploadExcelForm').addEventListener('submit', handleUploadExcel);
     document.getElementById('editFacultyForm').addEventListener('submit', handleEditFaculty);
     document.getElementById('searchFaculty').addEventListener('input', handleSearch);
 });
 
-// Normalize department name (merge comma variant into canonical form)
 function normalizeDepartmentName(name) {
     if (!name || typeof name !== 'string') return '';
     var s = name.trim();
@@ -41,7 +35,6 @@ function normalizeDepartmentName(name) {
     return s;
 }
 
-// Load distinct departments and populate Add + Edit dropdowns
 async function loadDepartments() {
     try {
         const response = await fetch(`${API_BASE_URL}/faculty/departments`);
@@ -80,7 +73,6 @@ async function loadDepartments() {
         fillSelect('facultyDepartment');
         fillSelect('editFacultyDepartment');
     } catch (e) {
-        // Fallback: use default departments only
         const list = DEFAULT_DEPARTMENTS;
         ['facultyDepartment', 'editFacultyDepartment'].forEach(function(selectId) {
             const sel = document.getElementById(selectId);
@@ -98,7 +90,6 @@ async function loadDepartments() {
     }
 }
 
-// Hamburger menu
 function initHamburgerMenu() {
     const menuToggle = document.getElementById('menuToggle');
     const sidebarMenu = document.getElementById('sidebarMenu');
@@ -120,7 +111,6 @@ function initHamburgerMenu() {
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeMenu);
 }
 
-// Tab switching
 function switchTab(tab) {
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
@@ -139,13 +129,12 @@ function switchTab(tab) {
     }
 }
 
-// Track connection-error hint to avoid showing it multiple times when API is down
 let _connectionErrorShownAt = 0;
 function showFetchErrorHint(error, context) {
     const isConnectionRefused = (error && (error.message === 'Failed to fetch' || error.name === 'TypeError'));
-    const isBlocked = isConnectionRefused; // Could refine: ad-blocker vs server down
+    const isBlocked = isConnectionRefused; 
     const now = Date.now();
-    if (now - _connectionErrorShownAt < 8000) return; // Don't spam; one hint per 8s
+    if (now - _connectionErrorShownAt < 8000) return; 
     _connectionErrorShownAt = now;
     if (isBlocked || isConnectionRefused) {
         showMessage(
@@ -157,7 +146,6 @@ function showFetchErrorHint(error, context) {
     }
 }
 
-// Load faculty count and show/hide "Load default faculty" banner when count is 0
 async function loadFacultyCount() {
     try {
         const response = await fetch(`${API_BASE_URL}/faculty/count`);
@@ -174,7 +162,6 @@ async function loadFacultyCount() {
     }
 }
 
-// Seed faculty from default Excel (ref.xlsx) - for Render/Replit when DB is empty
 async function seedFacultyFromDefault() {
     const btn = document.getElementById('seedFacultyBtn');
     if (btn) {
@@ -203,7 +190,6 @@ async function seedFacultyFromDefault() {
     }
 }
 
-// Load faculty list
 async function loadFacultyList() {
     const tbody = document.getElementById('facultyTableBody');
     tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Loading...</td></tr>';
@@ -213,7 +199,6 @@ async function loadFacultyList() {
         const data = await response.json();
         
         if (data.faculty && Array.isArray(data.faculty) && data.faculty.length > 0) {
-            // Sort alphabetically by name
             allFacultyData = data.faculty.sort((a, b) => {
                 const nameA = a.name.toLowerCase();
                 const nameB = b.name.toLowerCase();
@@ -230,7 +215,6 @@ async function loadFacultyList() {
             document.getElementById('paginationContainer').innerHTML = '';
         }
         
-        // Update count
         if (data.count !== undefined) {
             document.getElementById('facultyCount').textContent = data.count;
         }
@@ -241,12 +225,9 @@ async function loadFacultyList() {
     }
 }
 
-// Display faculty table with pagination
 function displayFacultyTable() {
     const tbody = document.getElementById('facultyTableBody');
     const searchTerm = document.getElementById('searchFaculty').value.toLowerCase();
-    
-    // Filter by search term
     if (searchTerm) {
         filteredFacultyData = allFacultyData.filter(f => 
             f.name.toLowerCase().includes(searchTerm) || 
@@ -256,7 +237,6 @@ function displayFacultyTable() {
         filteredFacultyData = [...allFacultyData];
     }
     
-    // Calculate pagination
     const totalPages = Math.ceil(filteredFacultyData.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -267,8 +247,6 @@ function displayFacultyTable() {
         document.getElementById('paginationContainer').innerHTML = '';
         return;
     }
-    
-    // Display paginated data
     tbody.innerHTML = paginatedFaculty.map(faculty => `
         <tr>
             <td>${escapeHtml(faculty.name)}</td>
@@ -285,11 +263,8 @@ function displayFacultyTable() {
         </tr>
     `).join('');
     
-    // Display pagination
     displayPagination(totalPages);
 }
-
-// Display pagination controls
 function displayPagination(totalPages) {
     const container = document.getElementById('paginationContainer');
     
@@ -300,7 +275,6 @@ function displayPagination(totalPages) {
     
     let paginationHTML = '<div class="pagination">';
     
-    // Previous button
     if (currentPage > 1) {
         paginationHTML += `<button onclick="goToPage(${currentPage - 1})" class="pagination-btn">
             <i class="fa fa-chevron-left"></i> Previous
@@ -309,13 +283,10 @@ function displayPagination(totalPages) {
         paginationHTML += '<button disabled class="pagination-btn disabled">Previous</button>';
     }
     
-    // Page numbers
     paginationHTML += '<span class="pagination-info">';
     paginationHTML += `Page ${currentPage} of ${totalPages}`;
     paginationHTML += ` (${filteredFacultyData.length} total)`;
     paginationHTML += '</span>';
-    
-    // Next button
     if (currentPage < totalPages) {
         paginationHTML += `<button onclick="goToPage(${currentPage + 1})" class="pagination-btn">
             Next <i class="fa fa-chevron-right"></i>
@@ -328,15 +299,12 @@ function displayPagination(totalPages) {
     container.innerHTML = paginationHTML;
 }
 
-// Go to specific page
 function goToPage(page) {
     currentPage = page;
     displayFacultyTable();
-    // Scroll to top of table
     window.scrollTo({ top: document.getElementById('facultyTableContainer').offsetTop - 20, behavior: 'smooth' });
 }
 
-// Handle add faculty form
 async function handleAddFaculty(e) {
     e.preventDefault();
     
@@ -354,7 +322,6 @@ async function handleAddFaculty(e) {
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
     
-    // Show loading state
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Adding...';
     
@@ -386,13 +353,11 @@ async function handleAddFaculty(e) {
     } catch (error) {
         showMessage('Error adding faculty member: ' + error.message, 'error');
     } finally {
-        // Hide loading state
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
     }
 }
 
-// Handle Excel upload
 async function handleUploadExcel(e) {
     e.preventDefault();
     
@@ -412,8 +377,6 @@ async function handleUploadExcel(e) {
     
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.innerHTML;
-    
-    // Show loading state
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Uploading...';
     
@@ -445,13 +408,11 @@ async function handleUploadExcel(e) {
     } catch (error) {
         showMessage('Error uploading Excel file: ' + error.message, 'error');
     } finally {
-        // Hide loading state
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
     }
 }
 
-// Open edit modal
 async function openEditModal(facultyId) {
     try {
         const response = await fetch(`${API_BASE_URL}/faculty/${facultyId}`);
@@ -476,13 +437,11 @@ async function openEditModal(facultyId) {
     }
 }
 
-// Close edit modal
 function closeEditModal() {
     document.getElementById('editModal').classList.remove('active');
     document.getElementById('editFacultyForm').reset();
 }
 
-// Handle edit form
 async function handleEditFaculty(e) {
     e.preventDefault();
     
@@ -521,7 +480,6 @@ async function handleEditFaculty(e) {
     }
 }
 
-// Delete faculty
 async function deleteFaculty(facultyId, facultyName) {
     if (!confirm(`Are you sure you want to delete "${facultyName}"?`)) {
         return;
@@ -546,13 +504,11 @@ async function deleteFaculty(facultyId, facultyName) {
     }
 }
 
-// Search handler
 function handleSearch() {
-    currentPage = 1; // Reset to first page on search
+    currentPage = 1; 
     displayFacultyTable();
 }
 
-// Show message
 function showMessage(message, type = 'info') {
     const container = document.getElementById('messageContainer');
     if (!container) return;
@@ -570,7 +526,6 @@ function showMessage(message, type = 'info') {
     setTimeout(() => {
         messageDiv.classList.remove('show');
         setTimeout(() => {
-            // Only remove if still in DOM (another showMessage may have cleared container)
             if (messageDiv.parentNode === container) {
                 container.removeChild(messageDiv);
             }
@@ -578,7 +533,6 @@ function showMessage(message, type = 'info') {
     }, 3000);
 }
 
-// Escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;

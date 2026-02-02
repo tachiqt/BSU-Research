@@ -1,8 +1,3 @@
-/**
- * Export Report page: preview and export Excel using template.
- * Filters and preview table are user-driven.
- */
-
 (function () {
     const API_BASE = (typeof window !== 'undefined' && window.API_BASE !== undefined && window.API_BASE !== '')
         ? window.API_BASE
@@ -10,7 +5,7 @@
             ? ''
             : 'http://localhost:5000';
 
-    // Keep the exact preview rows so export matches the preview 1:1
+   
     let lastPreviewPublications = null;
     const PREVIEW_PAGE_SIZE = 20;
     let currentPreviewPage = 1;
@@ -94,7 +89,6 @@
             btnNext.disabled = currentPreviewPage >= totalPages;
         }
         if (controlsEl) {
-            // Progressive/sliding window: show 3 page numbers (e.g. 1,2,3 -> click 2 -> 2,3,4)
             var startPage = currentPreviewPage;
             var endPage = Math.min(currentPreviewPage + 2, totalPages);
             var html = '';

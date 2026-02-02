@@ -1,4 +1,3 @@
-// Use relative /api when served from same host (e.g. Render), else localhost
 const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== undefined && window.API_BASE_URL !== '')
     ? window.API_BASE_URL
     : (typeof window !== 'undefined' && window.location.protocol !== 'file:' && window.location.host !== '')
@@ -7,10 +6,9 @@ const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL !== u
 const CACHE_KEY = 'bsu_research_data';
 const CACHE_TIMESTAMP_KEY = 'bsu_research_data_timestamp';
 const CACHE_VERSION_KEY = 'bsu_research_cache_version';
-const CACHE_VERSION = 2; // Bump when backend adds colleges/department data so old cache is refetched
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const CACHE_VERSION = 2; 
+const CACHE_DURATION = 24 * 60 * 60 * 1000; 
 
-// Clear cache when user closes the website (tab/window), not when navigating between pages
 function clearCacheOnClose() {
     try {
         localStorage.removeItem(CACHE_KEY);
@@ -26,9 +24,7 @@ window.addEventListener('DOMContentLoaded', function() {
     initHamburgerMenu();
     initYearFilter();
     loadAllData();
-    // Reset internal-nav flag so we can detect real close vs in-site navigation
     sessionStorage.removeItem('internal_nav');
-    // Mark internal navigation so we don't clear cache when switching Dashboard/Publications/Faculty
     document.querySelectorAll('a[href="index.html"], a[href="publications.html"], a[href="faculty.html"]').forEach(function(a) {
         a.addEventListener('click', function() {
             sessionStorage.setItem('internal_nav', '1');
@@ -43,7 +39,6 @@ window.addEventListener('beforeunload', function() {
     sessionStorage.removeItem('internal_nav');
 });
 
-// Check if cached data is still valid (age and version)
 function isCacheValid() {
     const version = parseInt(localStorage.getItem(CACHE_VERSION_KEY), 10);
     if (version !== CACHE_VERSION) return false;
@@ -53,7 +48,6 @@ function isCacheValid() {
     return age < CACHE_DURATION;
 }
 
-// Get cached data
 function getCachedData() {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
@@ -67,16 +61,13 @@ function getCachedData() {
     return null;
 }
 
-// Store data in cache
 function setCachedData(data) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
     localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
     localStorage.setItem(CACHE_VERSION_KEY, String(CACHE_VERSION));
 }
 
-// Load all data from API or cache
 async function loadAllData() {
-    // Check cache first
     if (isCacheValid()) {
         const cachedData = getCachedData();
         if (cachedData) {
@@ -86,7 +77,6 @@ async function loadAllData() {
         }
     }
     
-    // Fetch fresh data
     try {
         showLoadingState();
         const response = await fetch(`${API_BASE_URL}/all-data`);
@@ -100,19 +90,13 @@ async function loadAllData() {
         if (data.error) {
             throw new Error(data.error);
         }
-        
-        // Cache the data
         setCachedData(data);
-        
-        // Update dashboard
         updateDashboard(data.dashboard_stats);
         
     } catch (error) {
         console.error('Error loading data:', error);
         hideLoadingState();
         showErrorState();
-        
-        // Try to use cached data even if expired
         const cachedData = getCachedData();
         if (cachedData) {
             console.log('Using expired cached data due to fetch error');
@@ -139,7 +123,6 @@ async function loadAllData() {
 }
 
 async function loadDashboardData(year = '') {
-    // Get cached data
     const cachedData = getCachedData();
     if (!cachedData) {
         await loadAllData();
@@ -148,7 +131,6 @@ async function loadDashboardData(year = '') {
     
     let dashboardStats = cachedData.dashboard_stats;
     
-    // Apply year filter if specified
     if (year) {
         try {
             const filterYear = parseInt(year, 10);
@@ -158,7 +140,6 @@ async function loadDashboardData(year = '') {
             }
             const allPublications = cachedData.publications || [];
             
-            // Normalize publication year to number for comparison
             function getPubYear(pub) {
                 const pubYear = pub.year;
                 if (pubYear == null || pubYear === '') return null;
@@ -171,20 +152,15 @@ async function loadDashboardData(year = '') {
                 return isNaN(y) ? null : y;
             }
             
-            // Filter publications by year
             const filteredPublications = allPublications.filter(pub => {
                 const yearValue = getPubYear(pub);
                 return yearValue !== null && yearValue === filterYear;
             });
-            
-            // Recalculate quarterly counts
-            // If filtering by current year, only count quarters up to current quarter
             const currentDate = new Date();
             const currentYear = currentDate.getFullYear();
-            const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+            const currentMonth = currentDate.getMonth() + 1; 
             const isCurrentYear = filterYear === currentYear;
             
-            // Determine current quarter (1-4)
             let currentQuarter = 1;
             if (currentMonth >= 1 && currentMonth <= 3) currentQuarter = 1;
             else if (currentMonth >= 4 && currentMonth <= 6) currentQuarter = 2;
@@ -207,7 +183,6 @@ async function loadDashboardData(year = '') {
                             else if (7 <= monthInt && monthInt <= 9) pubQuarter = 3;
                             else if (10 <= monthInt && monthInt <= 12) pubQuarter = 4;
                             
-                            // Only count if it's not current year, or if it's current year and quarter <= current quarter
                             if (pubQuarter > 0 && (!isCurrentYear || pubQuarter <= currentQuarter)) {
                                 if (pubQuarter === 1) quarterly_counts.q1++;
                                 else if (pubQuarter === 2) quarterly_counts.q2++;
@@ -217,7 +192,6 @@ async function loadDashboardData(year = '') {
                             }
                         } else {
                             publicationsWithoutMonth++;
-                            // Count publications with invalid months in total only if not current year
                             if (!isCurrentYear) {
                                 publicationsCountedInTotal++;
                             }
@@ -225,7 +199,6 @@ async function loadDashboardData(year = '') {
                         }
                     } catch (e) {
                         publicationsWithoutMonth++;
-                        // Count publications with parsing errors in total only if not current year
                         if (!isCurrentYear) {
                             publicationsCountedInTotal++;
                         }
@@ -233,24 +206,18 @@ async function loadDashboardData(year = '') {
                     }
                 } else {
                     publicationsWithoutMonth++;
-                    // Count publications without months in total only if not current year
                     if (!isCurrentYear) {
                         publicationsCountedInTotal++;
                     }
                     console.warn(`Publication missing month:`, pub);
                 }
             });
-            
-            // Total should match the sum of quarters displayed (for current year, only up to current quarter)
             const total_publications = isCurrentYear ? publicationsCountedInTotal : filteredPublications.length;
-            
-            // Log if there's a discrepancy
             const quarterlySum = quarterly_counts.q1 + quarterly_counts.q2 + quarterly_counts.q3 + quarterly_counts.q4;
             if (quarterlySum + publicationsWithoutMonth !== total_publications && !isCurrentYear) {
                 console.warn(`Quarterly count mismatch: Total=${total_publications}, Quarters=${quarterlySum}, WithoutMonth=${publicationsWithoutMonth}`);
             }
             
-            // Recalculate college counts from filtered publications (each pub has colleges[] from backend)
             const college_counts = {
                 engineering: 0,
                 informatics_computing: 0,
@@ -286,17 +253,14 @@ function updateDashboard(data) {
         publicationsValue.textContent = String(data.total_publications || 0).padStart(2, '0');
     }
     
-    // Update college boxes with department counts from Excel
     const collegeBoxes = document.querySelectorAll('.college-box .box-value');
     if (collegeBoxes.length >= 4 && data.college_counts) {
-        // Use department-based counts from Excel faculty matching
         collegeBoxes[0].textContent = String(data.college_counts.engineering || 0).padStart(2, '0');
         collegeBoxes[1].textContent = String(data.college_counts.informatics_computing || 0).padStart(2, '0');
         collegeBoxes[2].textContent = String(data.college_counts.engineering_technology || 0).padStart(2, '0');
         collegeBoxes[3].textContent = String(data.college_counts.architecture_design || 0).padStart(2, '0');
     }
     
-    // Update quarterly counts (based on faculty-filtered publications)
     if (data.quarterly_counts) {
         const quarterValues = document.querySelectorAll('.quarter-value');
         if (quarterValues.length >= 4) {
@@ -307,7 +271,6 @@ function updateDashboard(data) {
         }
     }
     
-    // Log department breakdown if available
     if (data.department_counts && Object.keys(data.department_counts).length > 0) {
         console.log('Department Publication Counts (from Excel):');
         for (const [dept, count] of Object.entries(data.department_counts)) {
@@ -315,7 +278,6 @@ function updateDashboard(data) {
         }
     }
     
-    // Log department quarterly counts if available
     if (data.department_quarterly_counts && Object.keys(data.department_quarterly_counts).length > 0) {
         console.log('Department Quarterly Counts (from Excel):');
         for (const [dept, quarters] of Object.entries(data.department_quarterly_counts)) {
@@ -338,19 +300,14 @@ function updateDashboard(data) {
         const currentValue = yearFilter.value;
         yearFilter.innerHTML = '<option value="">All Years</option>';
         
-        // Generate complete year range from earliest to current year
         const currentYear = new Date().getFullYear();
         let startYear = currentYear;
-        
-        // Use earliest year from data if available, otherwise default to 10 years ago
         if (data.earliest_year && data.earliest_year < currentYear) {
             startYear = data.earliest_year;
         } else if (!data.earliest_year) {
-            // Default to 10 years ago if no data available
             startYear = currentYear - 10;
         }
         
-        // Generate year options from earliest to current (newest first)
         for (let year = currentYear; year >= startYear; year--) {
             const option = document.createElement('option');
             option.value = year;
@@ -358,7 +315,6 @@ function updateDashboard(data) {
             yearFilter.appendChild(option);
         }
         
-        // Restore previous selection if it still exists
         if (currentValue) {
             yearFilter.value = currentValue;
         }
@@ -434,7 +390,6 @@ function initHamburgerMenu() {
     }
 }
 
-// Removed sign-out functionality - no authentication needed
 
 function initYearFilter() {
     const yearFilter = document.getElementById('yearFilter');
