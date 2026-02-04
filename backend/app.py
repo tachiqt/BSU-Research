@@ -232,17 +232,13 @@ def get_dashboard_stats():
         department_counts = {}
         faculty_filtered_publications = []
         
-        # Default Excel file path
+        # Load faculty from DB (PostgreSQL on Railway) or Excel when available
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)
         default_excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
-        
-        # Use provided excel_file or default
-        excel_file = request.args.get('excel_file')
-        if not excel_file:
-            excel_file = default_excel_path if os.path.exists(default_excel_path) else None
-        
-        if excel_file and os.path.exists(excel_file):
+        excel_file = request.args.get('excel_file') or (default_excel_path if os.path.exists(default_excel_path) else None)
+        use_postgres = bool(os.getenv('DATABASE_URL') and str(os.getenv('DATABASE_URL', '')).startswith(('postgresql://', 'postgres://')))
+        if excel_file or use_postgres:
             try:
                 from faculty_reader import load_faculty_from_db_or_excel
                 sheet_name = request.args.get('sheet_name', 'Reference')
@@ -561,25 +557,24 @@ def get_publications_by_faculty():
         excel_path = data.get('excel_file_path')
         sheet_name = data.get('sheet_name', 'Reference')
         
-        # If no path provided, use default
+        # If no path provided, use default (only required when not using PostgreSQL)
         if not excel_path:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(current_dir)
             excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
-        
-        # Validate file exists
-        if not os.path.exists(excel_path):
+        use_postgres = bool(os.getenv('DATABASE_URL') and str(os.getenv('DATABASE_URL', '')).startswith(('postgresql://', 'postgres://')))
+        if not use_postgres and not os.path.exists(excel_path):
             return jsonify({'error': f'Excel file not found: {excel_path}'}), 404
         
-        # Load faculty data
+        # Load faculty from database (PostgreSQL) or Excel
         try:
             from faculty_reader import load_faculty_from_db_or_excel
             faculty_list = load_faculty_from_db_or_excel(excel_path, sheet_name=sheet_name, prefer_db=True)
         except Exception as e:
-            return jsonify({'error': f'Error reading Excel file: {str(e)}'}), 400
+            return jsonify({'error': f'Error loading faculty: {str(e)}'}), 400
         
         if not faculty_list:
-            return jsonify({'error': 'No faculty data found in Excel file'}), 400
+            return jsonify({'error': 'No faculty data found. Add faculty in Faculty Management or import from Excel.'}), 400
         
         # Apply college filter if specified
         college_filter = data.get('college_filter', '').strip()
@@ -745,10 +740,10 @@ def get_all_data():
         default_excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
         
         excel_file = default_excel_path if os.path.exists(default_excel_path) else None
-        
+        use_postgres = bool(os.getenv('DATABASE_URL') and str(os.getenv('DATABASE_URL', '')).startswith(('postgresql://', 'postgres://')))
         # Build pub_id -> set of college keys for year-filtered counts on frontend
         pub_id_to_colleges = {}
-        if excel_file and os.path.exists(excel_file):
+        if excel_file or use_postgres:
             try:
                 from faculty_reader import load_faculty_from_db_or_excel
                 faculty_list = load_faculty_from_db_or_excel(excel_file, sheet_name='Reference', prefer_db=True)
@@ -1041,7 +1036,7 @@ def _get_ref_xlsx_path():
 
 @app.route('/api/faculty/add', methods=['POST'])
 def add_faculty_member():
-    """Add a single faculty member. Always appends to Excel (ref.xlsx) when present so data persists on Replit/Render; also adds to database when available."""
+    """Add a single faculty member. Saves to database only (PostgreSQL on Railway or SQLite locally)."""
     try:
         data = request.get_json()
         name = data.get('name', '').strip()
@@ -1053,62 +1048,20 @@ def add_faculty_member():
         if not department:
             return jsonify({'error': 'Department is required'}), 400
         
-        excel_path = _get_ref_xlsx_path()
-        added_to_excel = False
-        
-        # 1) Always append to Excel first when ref.xlsx exists (persistent on Replit/Render)
-        if excel_path:
-            try:
-                from faculty_reader import append_faculty_to_excel
-                result = append_faculty_to_excel(
-                    excel_path, name, department, position,
-                    sheet_name=None, skip_duplicate=True
-                )
-                if result.get('duplicate'):
-                    return jsonify({
-                        'error': f'Faculty member "{name}" already exists',
-                        'duplicate': True
-                    }), 409
-                added_to_excel = True
-            except Exception as excel_err:
-                print(f"Warning: Could not append to Excel: {excel_err}")
-                # Continue; we may still add to DB below
-        
-        # 2) Also add to database when available (for fast reads)
-        try:
-            from database import add_faculty
-            faculty_id, is_new = add_faculty(name, department, position, skip_duplicate=True)
-            if not is_new and not added_to_excel:
-                return jsonify({
-                    'error': f'Faculty member "{name}" already exists',
-                    'duplicate': True
-                }), 409
-            if not is_new and added_to_excel:
-                # Excel had the new row; DB already had them (e.g. re-seed). Still success.
-                pass
+        from database import add_faculty
+        faculty_id, is_new = add_faculty(name, department, position, skip_duplicate=True)
+        if not is_new:
             return jsonify({
-                'message': 'Faculty member added successfully' + (' (saved to Excel for persistence)' if added_to_excel else ''),
-                'id': faculty_id,
-                'name': name,
-                'department': department,
-                'position': position,
-                'added_to_excel': added_to_excel
-            }), 201
-        except Exception as db_err:
-            if added_to_excel:
-                return jsonify({
-                    'message': 'Faculty member added to Excel (database unavailable; data will persist across restarts).',
-                    'name': name,
-                    'department': department,
-                    'position': position,
-                    'added_to_excel': True
-                }), 201
-            return jsonify({
-                'error': f'Could not add faculty. Database: {str(db_err)}. ' + (
-                    'No ref.xlsx found to save to Excel.' if not excel_path else 'Excel append also failed.'
-                )
-            }), 500
-        
+                'error': f'Faculty member "{name}" already exists',
+                'duplicate': True
+            }), 409
+        return jsonify({
+            'message': 'Faculty member added successfully',
+            'id': faculty_id,
+            'name': name,
+            'department': department,
+            'position': position,
+        }), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1254,12 +1207,13 @@ def report_preview():
             return jsonify({'error': scopus_data.get('error'), 'publications': []}), 503
 
         all_publications = scopus_data.get('publications', [])
-        # Optional: map college from faculty
+        # Optional: map college from faculty (DB on Railway or Excel when present)
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)
         default_excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
+        use_postgres = bool(os.getenv('DATABASE_URL') and str(os.getenv('DATABASE_URL', '')).startswith(('postgresql://', 'postgres://')))
         pub_id_to_college = {}
-        if os.path.exists(default_excel_path):
+        if os.path.exists(default_excel_path) or use_postgres:
             try:
                 from faculty_reader import load_faculty_from_db_or_excel
                 faculty_list = load_faculty_from_db_or_excel(default_excel_path, sheet_name='Reference', prefer_db=True)
@@ -1373,8 +1327,9 @@ def report_export():
 
             all_publications = scopus_data.get('publications', [])
             default_excel_path = os.path.join(project_root, 'img', 'ref.xlsx')
+            use_postgres = bool(os.getenv('DATABASE_URL') and str(os.getenv('DATABASE_URL', '')).startswith(('postgresql://', 'postgres://')))
             pub_id_to_college = {}
-            if os.path.exists(default_excel_path):
+            if os.path.exists(default_excel_path) or use_postgres:
                 try:
                     from faculty_reader import load_faculty_from_db_or_excel
                     faculty_list = load_faculty_from_db_or_excel(default_excel_path, sheet_name='Reference', prefer_db=True)

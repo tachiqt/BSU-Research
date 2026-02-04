@@ -11,29 +11,28 @@ except ImportError:
 
 def load_faculty_from_db_or_excel(file_path: str = None, sheet_name: str = None, prefer_db: bool = True) -> List[Dict]:
     """
-    Load faculty data from database (preferred) or Excel file (fallback)
-    
-    Args:
-        file_path: Path to Excel file (only used if database is empty or prefer_db=False)
-        sheet_name: Sheet name in Excel (only used if reading from Excel)
-        prefer_db: If True, try database first, fallback to Excel if empty
-    
-    Returns:
-        List of faculty dictionaries
+    Load faculty data from database (preferred) or Excel file (fallback).
+    When DATABASE_URL is set (e.g. PostgreSQL on Railway), only the database is used; no Excel.
     """
+    # When using PostgreSQL (Railway), always use database only; never read from Excel.
+    db_url = os.getenv('DATABASE_URL', '')
+    if db_url and (db_url.startswith('postgresql://') or db_url.startswith('postgres://')):
+        try:
+            from database import load_faculty_from_db
+            return load_faculty_from_db()
+        except Exception as e:
+            print(f"Error loading faculty from database: {e}")
+            return []
     if prefer_db:
         try:
             from database import load_faculty_from_db, get_faculty_count
             count = get_faculty_count()
             if count > 0:
-                print(f"Loading {count} faculty members from database...")
                 return load_faculty_from_db()
             else:
                 print("Database is empty, falling back to Excel...")
         except Exception as e:
             print(f"Error loading from database: {e}, falling back to Excel...")
-    
-    # Fallback to Excel
     return load_faculty_from_excel(file_path, sheet_name)
 
 def load_faculty_from_excel(file_path: str = None, sheet_name: str = None) -> List[Dict]:
