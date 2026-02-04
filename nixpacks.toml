@@ -1,0 +1,5 @@
+# Deploy from repo root so static files (reports.html, index.html, etc.) are in the image.
+# Install Python deps from backend/; start command is in Procfile (cd backend && gunicorn ...).
+providers = ["python"]
+[phases.install]
+cmds = ["pip install -r backend/requirements.txt"]
