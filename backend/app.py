@@ -1463,18 +1463,24 @@ def health_check():
         return jsonify({'status': 'healthy', 'message': 'Backend is running'}), 200
 
 # Serve static files (HTML, CSS, JS, images)
-# This allows Flask to serve the frontend files
+# Try repo root first (when Railway Root Directory is repo root), then backend/ (when Root Directory is backend)
+def _static_roots():
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_root = os.path.dirname(backend_dir)
+    return [repo_root, backend_dir]
+
 @app.route('/')
 def index():
     """Serve index.html"""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return send_from_directory(project_root, 'index.html')
+    for root in _static_roots():
+        path = os.path.join(root, 'index.html')
+        if os.path.exists(path) and os.path.isfile(path):
+            return send_from_directory(root, 'index.html')
+    return jsonify({'error': 'File not found'}), 404
 
 @app.route('/<path:filename>')
 def serve_static_files(filename):
     """Serve static files (HTML, CSS, JS, images)"""
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
     # Security: Prevent directory traversal (normpath for .. and leading slash)
     safe_path = os.path.normpath(filename)
     if '..' in safe_path or safe_path.startswith('/') or safe_path.startswith('\\'):
@@ -1486,12 +1492,11 @@ def serve_static_files(filename):
     # Check if file has allowed extension or is a known HTML file
     if any(filename.endswith(ext) for ext in allowed_extensions) or filename in ['index.html', 'publications.html', 'faculty.html', 'reports.html']:
         try:
-            # Build path for exists check (works on Windows and Unix)
-            file_path = os.path.join(project_root, *filename.split('/'))
-            if os.path.exists(file_path) and os.path.isfile(file_path):
-                # Use filename with forward slashes so Flask serves correctly on all platforms
-                return send_from_directory(project_root, filename)
-        except Exception as e:
+            for root in _static_roots():
+                file_path = os.path.join(root, *filename.split('/'))
+                if os.path.exists(file_path) and os.path.isfile(file_path):
+                    return send_from_directory(root, filename)
+        except Exception:
             pass
     
     # For API routes, return 404 (they should be handled by other routes)
