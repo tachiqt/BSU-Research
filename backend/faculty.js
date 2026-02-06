@@ -153,40 +153,12 @@ async function loadFacultyCount() {
         if (data.count !== undefined) {
             const countEl = document.getElementById('facultyCount');
             if (countEl) countEl.textContent = data.count;
-            const banner = document.getElementById('seedFacultyBanner');
+            const banner = document.getElementById('emptyFacultyBanner');
             if (banner) banner.style.display = data.count === 0 ? 'flex' : 'none';
         }
     } catch (error) {
         console.error('Error loading faculty count:', error);
         showFetchErrorHint(error, null);
-    }
-}
-
-async function seedFacultyFromDefault() {
-    const btn = document.getElementById('seedFacultyBtn');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading...';
-    }
-    try {
-        const response = await fetch(`${API_BASE_URL}/faculty/seed`, { method: 'POST' });
-        const data = await response.json();
-        if (response.ok) {
-            showMessage(data.message || `Loaded ${data.imported_count} faculty.`, 'success');
-            await loadFacultyCount();
-            await loadFacultyList();
-            const banner = document.getElementById('seedFacultyBanner');
-            if (banner) banner.style.display = 'none';
-        } else {
-            showMessage(data.error || 'Failed to load default faculty list', 'error');
-        }
-    } catch (error) {
-        showFetchErrorHint(error, 'Load default faculty');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-database"></i> Load default faculty list';
-        }
     }
 }
 

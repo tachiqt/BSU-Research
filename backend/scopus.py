@@ -562,17 +562,22 @@ def search_organization_id(organization_name):
 
 def filter_publications_by_faculty(publications: list, faculty_list: list) -> dict:
     """
-    Filter publications by faculty members and count by department.
-    
+    Filter publications by faculty from the database and count by department.
+
+    Filtering is based purely on faculty in the database: for each Scopus
+    publication, if any author matches a faculty member (by name/variants),
+    that publication counts toward that faculty member's department.
+
     Logic:
-    1. For each publication, check all authors
-    2. If any author matches a faculty member in Excel
-    3. Count that publication towards the faculty's department
-    
+    1. For each publication, parse authors from the Scopus authors string.
+    2. For each author, match against faculty_list (from database).
+    3. If any author matches a faculty member, count the publication toward
+       that faculty's department(s).
+
     Args:
         publications: List of publication dictionaries from Scopus
-        faculty_list: List of faculty dictionaries from Excel
-    
+        faculty_list: List of faculty dictionaries from the database
+
     Returns:
         Dictionary with:
         - department_counts: Count of publications per department

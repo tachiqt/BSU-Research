@@ -2,7 +2,6 @@ import pandas as pd
 import os
 from typing import List, Dict, Optional, Tuple
 
-# Optional openpyxl for appending to Excel (used by append_faculty_to_excel)
 try:
     from openpyxl import load_workbook
     _OPENPYXL_AVAILABLE = True
@@ -10,35 +9,14 @@ except ImportError:
     _OPENPYXL_AVAILABLE = False
 
 def load_faculty_from_db_or_excel(file_path: str = None, sheet_name: str = None, prefer_db: bool = True) -> List[Dict]:
-    """
-    Load faculty data from database (preferred) or Excel file (fallback).
-    When DATABASE_URL is set (e.g. PostgreSQL on Railway), only the database is used; no Excel.
-    """
-    # When using PostgreSQL (Railway), always use database only; never read from Excel.
-    db_url = os.getenv('DATABASE_URL', '')
-    if db_url and (db_url.startswith('postgresql://') or db_url.startswith('postgres://')):
-        try:
-            from database import load_faculty_from_db
-            return load_faculty_from_db()
-        except Exception as e:
-            print(f"Error loading faculty from database: {e}")
-            return []
-    if prefer_db:
-        try:
-            from database import load_faculty_from_db, get_faculty_count
-            count = get_faculty_count()
-            if count > 0:
-                return load_faculty_from_db()
-            else:
-                print("Database is empty, falling back to Excel...")
-        except Exception as e:
-            print(f"Error loading from database: {e}, falling back to Excel...")
-    return load_faculty_from_excel(file_path, sheet_name)
+    try:
+        from database import load_faculty_from_db
+        return load_faculty_from_db()
+    except Exception as e:
+        print(f"Error loading faculty from database: {e}")
+        return []
 
 def load_faculty_from_excel(file_path: str = None, sheet_name: str = None) -> List[Dict]:
-    """
-    Load faculty from Excel file. If sheet_name is None or empty, uses the first sheet.
-    """
     if file_path is None:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)
@@ -54,12 +32,10 @@ def load_faculty_from_excel(file_path: str = None, sheet_name: str = None) -> Li
         if not available_sheets:
             raise ValueError(f"No sheets found in Excel file: {file_path}")
         
-        # If no sheet name provided or empty, use first sheet
         if not sheet_name or sheet_name.strip() == '':
             matching_sheet = available_sheets[0]
             print(f"No sheet name specified, using first sheet: '{matching_sheet}'")
         else:
-            # Try to find matching sheet (case-insensitive)
             matching_sheet = None
             sheet_name_lower = sheet_name.strip().lower()
             
@@ -69,14 +45,12 @@ def load_faculty_from_excel(file_path: str = None, sheet_name: str = None) -> Li
                     break
             
             if not matching_sheet:
-                # Try partial match
                 for sheet in available_sheets:
                     if sheet_name_lower in sheet.lower() or sheet.lower() in sheet_name_lower:
                         matching_sheet = sheet
                         break
             
             if not matching_sheet:
-                # Use first sheet as fallback
                 print(f"Warning: Sheet '{sheet_name}' not found. Available sheets: {available_sheets}")
                 print(f"Using first available sheet: '{available_sheets[0]}'")
                 matching_sheet = available_sheets[0]
@@ -122,10 +96,6 @@ def load_faculty_from_excel(file_path: str = None, sheet_name: str = None) -> Li
 
 
 def _detect_excel_columns(ws) -> Tuple[Optional[int], Optional[int], Optional[int]]:
-    """
-    Detect 1-based column indices for name, department, position from first row.
-    Returns (name_col, dept_col, position_col).
-    """
     name_col = dept_col = position_col = None
     for col_idx, cell in enumerate(ws[1], start=1):
         val = (cell.value or '').strip() if cell.value else ''
@@ -147,15 +117,6 @@ def append_faculty_to_excel(
     sheet_name: Optional[str] = None,
     skip_duplicate: bool = True,
 ) -> Dict:
-    """
-    Append a single faculty row to an existing Excel file.
-    Uses openpyxl to preserve file format. Falls back to pandas if openpyxl fails.
-
-    Returns:
-        dict: {'success': True} or {'duplicate': True} if name already exists and skip_duplicate=True.
-    Raises:
-        Exception: If file not found, columns missing, or write fails.
-    """
     name = (name or '').strip()
     department = (department or '').strip()
     position = (position or '').strip()
@@ -198,7 +159,6 @@ def append_faculty_to_excel(
         wb.save(file_path)
         return {'success': True}
 
-    # Fallback: pandas read, append row, write back (overwrites file)
     excel_file = pd.ExcelFile(file_path)
     available_sheets = excel_file.sheet_names
     use_sheet = (sheet_name or '').strip() or available_sheets[0]
@@ -302,7 +262,6 @@ def match_author_to_faculty(author_name: str, faculty_list: List[Dict]) -> Dict:
     scopus_initials_clean = scopus_initials.upper().replace('.', '').replace(' ', '') if scopus_initials else ''
     author_parts_all = author_name.split()
     if len(author_parts_all) >= 2 and not scopus_last:
-        # Might be "First Last" format
         potential_last = author_parts_all[-1]
         potential_first = author_parts_all[0]
         scopus_last_lower = potential_last.lower()

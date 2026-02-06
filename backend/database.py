@@ -2,7 +2,6 @@ import os
 import json
 from typing import List, Dict, Optional, Any
 
-# Prefer PostgreSQL when DATABASE_URL is set (e.g. Railway)
 DATABASE_URL = os.getenv('DATABASE_URL')
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'faculty.db')
 
@@ -11,18 +10,15 @@ _use_postgres = bool(DATABASE_URL and DATABASE_URL.startswith('postgresql'))
 if _use_postgres:
     import psycopg2
     from psycopg2 import extras as pg_extras
-    # Railway may provide postgres:// which we normalize to postgresql://
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = 'postgresql://' + DATABASE_URL.split('://', 1)[1]
 
 
 def _placeholder(n: int) -> str:
-    """Return placeholder style for current backend (? for SQLite, %s for PostgreSQL)."""
     return '?' if not _use_postgres else '%s'
 
 
 def get_db_connection():
-    """Get database connection (SQLite or PostgreSQL)."""
     if _use_postgres:
         conn = psycopg2.connect(DATABASE_URL)
         return conn
@@ -33,14 +29,12 @@ def get_db_connection():
 
 
 def _cursor(conn):
-    """Return a cursor that yields dict-like rows (for both backends)."""
     if _use_postgres:
         return conn.cursor(cursor_factory=pg_extras.RealDictCursor)
     return conn.cursor()
 
 
 def _row_to_dict(row, keys=None) -> Optional[Dict]:
-    """Turn a row (sqlite Row or dict) into a plain dict."""
     if row is None:
         return None
     if hasattr(row, 'keys'):
@@ -49,7 +43,6 @@ def _row_to_dict(row, keys=None) -> Optional[Dict]:
 
 
 def init_database():
-    """Initialize the database schema (SQLite or PostgreSQL)."""
     conn = get_db_connection()
     cur = _cursor(conn)
 
@@ -88,7 +81,6 @@ def init_database():
 
 
 def get_distinct_departments() -> List[str]:
-    """Return sorted list of distinct department names (for dropdowns)."""
     p = _placeholder(1)
     conn = get_db_connection()
     cur = _cursor(conn)
@@ -101,7 +93,6 @@ def get_distinct_departments() -> List[str]:
 
 
 def load_faculty_from_db() -> List[Dict]:
-    """Load all faculty from database"""
     conn = get_db_connection()
     cur = _cursor(conn)
     cur.execute('SELECT id, name, department, position, name_variants FROM faculty ORDER BY name')
@@ -129,12 +120,6 @@ def load_faculty_from_db() -> List[Dict]:
 
 
 def import_faculty_from_list(faculty_list: List[Dict], clear_existing: bool = True, skip_duplicates: bool = True):
-    """
-    Import faculty list into database
-
-    Returns:
-        dict: {'imported': count, 'skipped': count, 'duplicates': list}
-    """
     p = _placeholder(1)
     conn = get_db_connection()
     cur = _cursor(conn)
@@ -183,7 +168,6 @@ def import_faculty_from_list(faculty_list: List[Dict], clear_existing: bool = Tr
 
 
 def get_faculty_count() -> int:
-    """Get total number of faculty in database"""
     conn = get_db_connection()
     cur = _cursor(conn)
     cur.execute('SELECT COUNT(*) as count FROM faculty')
@@ -193,7 +177,6 @@ def get_faculty_count() -> int:
 
 
 def faculty_exists(name: str) -> bool:
-    """Check if a faculty member with the same name already exists"""
     p = _placeholder(1)
     conn = get_db_connection()
     cur = _cursor(conn)
@@ -204,12 +187,6 @@ def faculty_exists(name: str) -> bool:
 
 
 def add_faculty(name: str, department: str, position: str = '', skip_duplicate: bool = True) -> tuple:
-    """
-    Add a single faculty member
-
-    Returns:
-        tuple: (faculty_id, is_new) - faculty_id is None if duplicate and skip_duplicate=True
-    """
     from faculty_reader import _generate_name_variants
 
     name_clean = name.strip()
@@ -240,7 +217,6 @@ def add_faculty(name: str, department: str, position: str = '', skip_duplicate: 
 
 
 def update_faculty(faculty_id: int, name: str, department: str, position: str = '') -> bool:
-    """Update a faculty member"""
     from faculty_reader import _generate_name_variants
 
     name_variants = _generate_name_variants(name)
@@ -265,7 +241,6 @@ def update_faculty(faculty_id: int, name: str, department: str, position: str = 
 
 
 def delete_faculty(faculty_id: int) -> bool:
-    """Delete a faculty member"""
     p = _placeholder(1)
     conn = get_db_connection()
     cur = _cursor(conn)
@@ -277,7 +252,6 @@ def delete_faculty(faculty_id: int) -> bool:
 
 
 def get_faculty_by_id(faculty_id: int) -> Optional[Dict]:
-    """Get a single faculty member by ID"""
     p = _placeholder(1)
     conn = get_db_connection()
     cur = _cursor(conn)

@@ -1,7 +1,3 @@
-"""
-Generate quarterly monitoring report Excel from template.
-Fills header (fiscal year, quarter, campus) and publication data from Scopus.
-"""
 import os
 import copy
 from datetime import datetime
@@ -10,21 +6,16 @@ from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 
 
-# Template path (img folder)
 def _template_path(project_root=None):
     if project_root is None:
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(project_root, 'img', 'RESEARCH AL_4th Quarter Monitoring Report_2025.xlsx')
 
 
-# --- RES-Publication sheet layout (0-based row/col in code; Excel is 1-based) ---
-# Row 5 (index 5): Fiscal Year / Quarter
-# Row 6 (index 6): Constituent Campus
-# Rows 10-11: headers; data starts row 13
 PUB_SHEET = 'RES-Publication'
-PUB_HEADER_ROW = 5   # 1-based: 6
-PUB_CAMPUS_ROW = 6   # 1-based: 7
-PUB_DATA_START = 13  # 1-based: 14
+PUB_HEADER_ROW = 5   
+PUB_CAMPUS_ROW = 6   
+PUB_DATA_START = 13 
 PUB_SIG_LABEL_ROW = 34
 PUB_SIG_NAME_ROW = 37
 PUB_SIG_TITLE_ROW = 38
@@ -34,7 +25,6 @@ PUB_COLS = {
     'source_fund': 6, 'status': 7, 'sdg': 8, 'requested': 9, 'venue': 10, 'pub_type': 11
 }
 
-# --- RES-Presentation sheet (optional; we can fill header + signatures only) ---
 PRES_SHEET = 'RES-Presentation'
 PRES_HEADER_ROW = 5
 PRES_CAMPUS_ROW = 6
@@ -42,7 +32,6 @@ PRES_SIG_NAME_ROW = 22
 PRES_SIG_TITLE_ROW = 23
 PRES_SIG_OFFICE_ROW = 24
 
-# --- RES-IP Assets sheet ---
 IP_SHEET = 'RES-IP Assets'
 IP_HEADER_ROW = 5
 IP_CAMPUS_ROW = 6
@@ -52,10 +41,6 @@ IP_SIG_OFFICE_ROW = 26
 
 
 def _get_merged_top_left_cell(ws, row_1based, col_1based):
-    """
-    If (row, col) is inside a merged range, return the top-left writable Cell of that range.
-    Otherwise, return the original Cell.
-    """
     cell = ws.cell(row=row_1based, column=col_1based)
     if not isinstance(cell, MergedCell):
         return cell
@@ -75,10 +60,6 @@ def _set_cell(ws, row_1based, col_1based, value):
 
 
 def _clear_cell(ws, row_1based, col_1based):
-    """
-    Clear a cell value while preserving formatting.
-    If it's part of a merged range, clear only the top-left cell of that range.
-    """
     cell = ws.cell(row=row_1based, column=col_1based)
     if not isinstance(cell, MergedCell):
         cell.value = None
@@ -86,13 +67,11 @@ def _clear_cell(ws, row_1based, col_1based):
     top_left = _get_merged_top_left_cell(ws, row_1based, col_1based)
     if isinstance(top_left, MergedCell):
         return
-    # Only clear once per merged range
     if top_left.row == row_1based and top_left.column == col_1based:
         top_left.value = None
 
 
 def _copy_row_style(ws, src_row, dst_row, col_min=1, col_max=11):
-    """Copy row height and cell styles from src_row to dst_row."""
     try:
         ws.row_dimensions[dst_row].height = ws.row_dimensions[src_row].height
     except Exception:
@@ -113,20 +92,15 @@ def _copy_row_style(ws, src_row, dst_row, col_min=1, col_max=11):
 
 
 def _fill_header_and_signatures(ws, fiscal_year, quarter, campus, signatures, header_row, campus_row, name_row, title_row, office_row):
-    """Fill fiscal year, quarter, and campus only (signatures not written)."""
     _set_cell(ws, header_row, 1, f'Fiscal Year: {fiscal_year} Quarter: {quarter}')
     _set_cell(ws, campus_row, 1, f'Constituent Campus: {campus}')
 
 
 def fill_publication_sheet(ws, publications, fiscal_year, quarter, campus, signatures):
-    """Fill RES-Publication sheet: header, campus, data rows, signatures."""
-    # Ensure we have enough rows for all publications.
-    # If publications exceed the template capacity, insert rows before the signature block.
     capacity = PUB_SIG_LABEL_ROW - PUB_DATA_START
     extra = max(0, len(publications) - capacity)
     if extra:
         ws.insert_rows(PUB_SIG_LABEL_ROW, amount=extra)
-        # Copy styles into inserted rows so the table keeps the template format
         for r in range(PUB_SIG_LABEL_ROW, PUB_SIG_LABEL_ROW + extra):
             _copy_row_style(ws, PUB_DATA_START, r, col_min=1, col_max=11)
 
@@ -141,7 +115,6 @@ def fill_publication_sheet(ws, publications, fiscal_year, quarter, campus, signa
         sig_name_row, sig_title_row, sig_office_row
     )
 
-    # Clear only publication data rows, not signature rows
     for r in range(PUB_DATA_START, sig_label_row):
         for c in range(1, 12):
             _clear_cell(ws, r, c)
@@ -178,7 +151,6 @@ def fill_ip_assets_sheet(ws, fiscal_year, quarter, campus, signatures):
 
 
 def publications_to_report_rows(publications):
-    """Convert API publication objects to report row dicts (for preview and for Excel)."""
     rows = []
     for p in publications:
         year = p.get('year')
@@ -193,7 +165,6 @@ def publications_to_report_rows(publications):
         pub_type = p.get('pub_type') or ''
         if not pub_type or not isinstance(pub_type, str):
             pub_type = 'Journal' if (p.get('venue') and 'journal' in (p.get('venue') or '').lower()) else 'Conference Proceeding'
-        # Research link for MOV column: Scopus link, or DOI URL, or existing moy
         link = p.get('link') or ''
         doi = (p.get('doi') or '').strip()
         if not link and doi:
@@ -219,7 +190,6 @@ def publications_to_report_rows(publications):
 
 
 def _normalize_pub_type(pub_type):
-    """Return 'Journal', 'Conference Proceeding', or 'Other Type'."""
     if not pub_type:
         return 'Other Type'
     s = str(pub_type).strip().lower()
@@ -231,7 +201,6 @@ def _normalize_pub_type(pub_type):
 
 
 def _quarter_from_month(month):
-    """Return 1-4 for Q1-Q4, or 0 if unknown."""
     if month is None:
         return 0
     try:
@@ -249,7 +218,6 @@ def _quarter_from_month(month):
     return 0
 
 
-# New template: by type, then by quarter. Column order per reference. MOV = Means of Verification (research link).
 REPORT_COLUMNS = [
     'No.', 'Article Title', 'Author/s', 'College, Campus', 'Type of Publication',
     'Source of Fund', 'Journal or Conference Proceeding Title', 'Indexing', 'Publisher', 'MOV'
@@ -257,20 +225,18 @@ REPORT_COLUMNS = [
 QUARTER_NAMES = {1: 'FIRST QUARTER', 2: 'SECOND QUARTER', 3: 'THIRD QUARTER', 4: 'FOURTH QUARTER'}
 TYPE_SHEET_NAMES = {'Journal': 'Journal', 'Conference Proceeding': 'Conference Proceeding', 'Other': 'Other Type'}
 
-# Column widths for proper viewing (wrap text kept). Type of Publication, Source of Fund, Indexing wider to avoid single-word wrap.
 REPORT_COLUMN_WIDTHS = {
-    1: 6,   # No.
-    2: 45,  # Article Title
-    3: 28,  # Author/s
-    4: 28,  # College, Campus
-    5: 18,  # Type of Publication
-    6: 14,  # Source of Fund
-    7: 38,  # Journal or Conference Proceeding Title
-    8: 12,  # Indexing
-    9: 28,  # Publisher
-    10: 50, # MOV
+    1: 6,  
+    2: 45,  
+    3: 28,  
+    4: 28, 
+    5: 18,  
+    6: 14, 
+    7: 38,  
+    8: 12, 
+    9: 28,  
+    10: 50, 
 }
-# Quarter header spans from Type of Publication (col 5) through MOV (col 10) so it aligns with that block.
 QUARTER_HEADER_START_COL = 5
 QUARTER_HEADER_END_COL = 10
 
@@ -292,14 +258,12 @@ def _thin_border():
 
 
 def _apply_report_column_widths(ws, num_cols=10):
-    """Set column widths for report tables so content is readable with wrap text."""
     for col, width in REPORT_COLUMN_WIDTHS.items():
         if col <= num_cols:
             ws.column_dimensions[get_column_letter(col)].width = width
 
 
 def _quarter_label_to_number(quarter):
-    """Convert '1st','2nd','3rd','4th' to 1,2,3,4; 'all' or unknown -> None."""
     if not quarter:
         return None
     q = str(quarter).strip().lower()
@@ -309,16 +273,9 @@ def _quarter_label_to_number(quarter):
 
 
 def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatures, project_root=None, force_quarter=None):
-    """
-    Build report workbook from reference template: separate by type of publication,
-    then within each type separate by quarter. One sheet per type (Journal, Conference Proceeding, Other).
-    Each sheet: title (e.g. JOURNAL), column headers, then FIRST QUARTER / data rows, etc.
-    If force_quarter is 1,2,3, or 4, all publications are placed in that quarter (matches preview count).
-    """
     from openpyxl.styles import Alignment, Font
 
     wb = openpyxl.Workbook()
-    # Remove default sheet after we add our sheets
     if 'Sheet' in wb.sheetnames:
         del wb['Sheet']
 
@@ -327,8 +284,6 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
     thin_border = _thin_border()
     wrap_alignment = Alignment(wrap_text=True, vertical='top')
 
-    # Group by type, then by quarter (no "All Publications" sheet — export matches second image: Journal, Conference Proceeding, Other only).
-    # When force_quarter is set (e.g. user selected "1st"), put all in that quarter.
     by_type = {}
     for p in publications:
         pt = _normalize_pub_type(p.get('pub_type'))
@@ -338,7 +293,6 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
             q = _quarter_from_month(p.get('month')) or 4
         by_type.setdefault(pt, {}).setdefault(q, []).append(p)
 
-    # Create a single sheet for all publications
     ws = wb.create_sheet(title='Publications')
     if 'Sheet' in wb.sheetnames:
         del wb['Sheet']
@@ -350,11 +304,9 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
         quarters_data = by_type.get(type_key, {})
         total_entries_type = sum(len(quarters_data.get(q, [])) for q in (1, 2, 3, 4))
         
-        # Skip types with no data
         if total_entries_type == 0:
             continue
 
-        # Type Header row (e.g. JOURNAL)
         tc = ws.cell(row=row, column=1, value=type_key.upper())
         tc.fill = blue_fill
         tc.font = header_font
@@ -362,7 +314,6 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=len(REPORT_COLUMNS))
         row += 1
 
-        # Column headers
         for col, label in enumerate(REPORT_COLUMNS, start=1):
             c = ws.cell(row=row, column=col, value=label)
             c.fill = blue_fill
@@ -371,20 +322,13 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
             c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         row += 1
 
-        global_no = 0 # Numbering resets per type? Or continuous?
-        # Image 1 shows Journal 1-9.
-        # Image 3 shows Conference 1-2.
-        # So numbering resets per type.
-        
+        global_no = 0 
         for qnum in (1, 2, 3, 4):
             entries = quarters_data.get(qnum, [])
             if not entries:
                 continue
             
-            # Quarter Header row
             section_name = QUARTER_NAMES.get(qnum, f'QUARTER {qnum}')
-            
-            # Fill all cells with blue first
             for col in range(1, len(REPORT_COLUMNS) + 1):
                 c = ws.cell(row=row, column=col)
                 c.fill = blue_fill
@@ -392,10 +336,7 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
                 c.border = thin_border
                 c.alignment = wrap_alignment
 
-            # Merge all columns for the quarter header and center text
             ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=len(REPORT_COLUMNS))
-            
-            # Set text in the first cell (top-left of merged range) and center it
             c1 = ws.cell(row=row, column=1, value=section_name)
             c1.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             
@@ -403,13 +344,11 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
 
             for pub in entries:
                 global_no += 1
-                # All cells: wrap text so content fits in the box
                 for col in range(1, len(REPORT_COLUMNS) + 1):
                     ws.cell(row=row, column=col).alignment = wrap_alignment
                     ws.cell(row=row, column=col).border = thin_border
                 ws.cell(row=row, column=1, value=global_no)
                 ws.cell(row=row, column=2, value=pub.get('title') or '')
-                # Full author list (no truncation)
                 ws.cell(row=row, column=3, value=pub.get('authors') or '')
                 ws.cell(row=row, column=4, value=pub.get('college_campus') or 'Batangas State University')
                 ws.cell(row=row, column=5, value=pub.get('pub_type') or type_key)
@@ -417,7 +356,6 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
                 ws.cell(row=row, column=7, value=pub.get('venue') or '')
                 ws.cell(row=row, column=8, value=pub.get('indexing') or 'Scopus')
                 ws.cell(row=row, column=9, value=pub.get('publisher') or '')
-                # MOV column: research link (clickable hyperlink when URL is present)
                 mov_url = pub.get('mov_link') or pub.get('moy') or pub.get('link') or ''
                 if pub.get('doi') and not mov_url:
                     doi = (pub.get('doi') or '').strip()
@@ -428,11 +366,7 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
                     mov_cell.hyperlink = mov_url
                     mov_cell.font = Font(color='0563C1', underline='single')
                 row += 1
-            # Add a small buffer row between quarters? The images don't clearly show empty rows between quarters, 
-            # but usually they are stacked. Image 2 shows Q2 starts immediately after Q1 data.
-            # But between TYPES there might be space?
         
-        # Add space after each type section?
         row += 1 
 
     if row == 1:
@@ -442,11 +376,6 @@ def build_report_by_type_and_quarter(fiscal_year, campus, publications, signatur
 
 
 def build_report(fiscal_year, quarter, campus, publications, signatures, project_root=None):
-    """
-    Build report using the reference template: separate by type of publication (Journal, Conference, Other),
-    then within each type separate by quarter. When quarter is 1st/2nd/3rd/4th (not All), all publications
-    are placed in that quarter so export count matches preview.
-    """
     force_q = _quarter_label_to_number(quarter)
     return build_report_by_type_and_quarter(
         str(fiscal_year), str(campus), publications, signatures, project_root, force_quarter=force_q
@@ -454,5 +383,4 @@ def build_report(fiscal_year, quarter, campus, publications, signatures, project
 
 
 def get_preview_data(publications):
-    """Return list of rows for preview (same fields as report, no Excel)."""
     return publications_to_report_rows(publications)

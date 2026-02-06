@@ -1,0 +1,11 @@
+{
+  "name": "bsu-research-frontend",
+  "version": "1.0.0",
+  "description": "Obfuscate client-side JS for production",
+  "scripts": {
+    "obfuscate": "node obfuscate.js"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^4.1.1"
+  }
+}

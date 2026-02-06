@@ -47,6 +47,9 @@ Thumbs.db
 # Excel temporary/lock files (created when workbook is open)
 ~$*
 
+# Node (obfuscator deps)
+node_modules/
+
 # Replit
 .pythonlibs/
 .upm/

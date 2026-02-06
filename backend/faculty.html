@@ -158,11 +158,8 @@
             <!-- View Faculty Tab -->
             <div id="viewTab" class="tab-content">
                 <div class="view-faculty-section">
-                    <div id="seedFacultyBanner" class="seed-faculty-banner" style="display: none;">
-                        <p>No faculty in database. Load the default list from <code>ref.xlsx</code>?</p>
-                        <button type="button" class="btn-primary" onclick="seedFacultyFromDefault()" id="seedFacultyBtn">
-                            <i class="fa fa-database"></i> Load default faculty list
-                        </button>
+                    <div id="emptyFacultyBanner" class="seed-faculty-banner" style="display: none;">
+                        <p>No faculty in database. Add faculty manually above or upload an Excel file to import.</p>
                     </div>
                     <div class="faculty-controls">
                         <input type="text" id="searchFaculty" placeholder="Search by name or department..." 
@@ -272,6 +269,6 @@
             });
         })();
     </script>
-    <script src="faculty.js"></script>
+    <script src="faculty.obf.js"></script>
 </body>
 </html>
