@@ -6,10 +6,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy backend and project root (for static files)
+# Copy backend (HTML, CSS, JS, img are in backend/ or backend/img/)
 COPY backend/requirements.txt backend/
 COPY backend/ ./backend/
-COPY index.html publications.html faculty.html style.css script.js faculty.js ./
 COPY img/ ./img/
 
 WORKDIR /app/backend
